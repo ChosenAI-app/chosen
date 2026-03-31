@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { normalizeZip, isPaloAltoZip } from "@/lib/utils/jurisdiction"
+import { normalizeZip } from "@/lib/utils/jurisdiction"
 import { generateObject } from "ai"
 import { anthropic } from "@ai-sdk/anthropic"
 import { z } from "zod"
@@ -39,19 +39,8 @@ export async function createHomeownerProject(formData: FormData): Promise<{
     return { data: null, error: "Street address is required." }
   }
 
-  if (!rawZip) {
-    return { data: null, error: "Zip code is required." }
-  }
-
-  const normalizedZip = normalizeZip(rawZip)
-
-  if (!isPaloAltoZip(normalizedZip)) {
-    return {
-      data: null,
-      error:
-        "Chosen currently supports Palo Alto only (94301, 94303, 94304, 94306).",
-    }
-  }
+  // Zip code is optional — extracted from Google Places when available
+  const normalizedZip = rawZip ? normalizeZip(rawZip) : ""
 
   if (
     !projectType ||
@@ -71,12 +60,16 @@ export async function createHomeownerProject(formData: FormData): Promise<{
     return { data: null, error: "You must be logged in." }
   }
 
-  // Look up jurisdiction
-  const { data: jurisdiction } = await supabase
-    .from("jurisdictions")
-    .select("id")
-    .contains("zip_codes", [normalizedZip])
-    .maybeSingle()
+  // Look up jurisdiction (only if we have a zip code)
+  let jurisdiction: { id: string } | null = null
+  if (normalizedZip) {
+    const { data } = await supabase
+      .from("jurisdictions")
+      .select("id")
+      .contains("zip_codes", [normalizedZip])
+      .maybeSingle()
+    jurisdiction = data
+  }
 
   // Fetch parcel data from Regrid
   let regridParcelId: string | null = null
@@ -90,7 +83,10 @@ export async function createHomeownerProject(formData: FormData): Promise<{
   let mapLng: number | null = null
 
   try {
-    const regridUrl = `https://app.regrid.com/api/v2/parcels/typeahead?query=${encodeURIComponent(address + ", Palo Alto, CA " + normalizedZip)}&token=${process.env.REGRID_API_KEY}`
+    const regridQuery = normalizedZip
+      ? `${address}, Palo Alto, CA ${normalizedZip}`
+      : `${address}, Palo Alto, CA`
+    const regridUrl = `https://app.regrid.com/api/v2/parcels/typeahead?query=${encodeURIComponent(regridQuery)}&token=${process.env.REGRID_API_KEY}`
     const regridRes = await fetch(regridUrl)
     if (regridRes.ok) {
       const regridJson = await regridRes.json()
@@ -138,7 +134,7 @@ export async function createHomeownerProject(formData: FormData): Promise<{
       .insert({
         homeowner_id: user.id,
         address,
-        zip_code: normalizedZip,
+        zip_code: normalizedZip || "94301",
         jurisdiction_id: jurisdiction?.id ?? null,
         project_type: projectType,
         description,

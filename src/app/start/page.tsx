@@ -3,7 +3,6 @@
 import { useState, useTransition, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -23,8 +22,6 @@ declare global {
   }
 }
 
-const PALO_ALTO_ZIPS = new Set(["94301", "94303", "94304", "94306"])
-
 const PROJECT_TYPES = [
   { value: "adu_detached", label: "Detached ADU" },
   { value: "adu_attached", label: "Attached ADU" },
@@ -41,6 +38,7 @@ export default function StartPage() {
   // Step 1 fields
   const [address, setAddress] = useState("")
   const [zipCode, setZipCode] = useState("")
+  const [placeCity, setPlaceCity] = useState("")
   const [projectType, setProjectType] = useState("")
   const [description, setDescription] = useState("")
 
@@ -110,7 +108,9 @@ export default function StartPage() {
             for (const component of place.addressComponents) {
               if (component.types?.includes("postal_code")) {
                 setZipCode(component.longText)
-                break
+              }
+              if (component.types?.includes("locality")) {
+                setPlaceCity(component.longText)
               }
             }
           }
@@ -138,14 +138,18 @@ export default function StartPage() {
     setError(null)
 
     if (!address.trim()) {
-      setError("Street address is required.")
+      setError("Please select an address from the dropdown above.")
       return
     }
 
-    const normalized = zipCode.replace(/\D/g, "").slice(0, 5)
-    if (!normalized || !PALO_ALTO_ZIPS.has(normalized)) {
+    if (!placeCity) {
+      setError("Please select an address from the dropdown above.")
+      return
+    }
+
+    if (placeCity !== "Palo Alto") {
       setError(
-        "Chosen currently supports Palo Alto only (94301, 94303, 94304, 94306)."
+        "Chosen currently serves Palo Alto only. Support for more cities coming soon."
       )
       return
     }
@@ -168,7 +172,7 @@ export default function StartPage() {
 
     const formData = new FormData()
     formData.set("address", address.trim())
-    formData.set("zip_code", zipCode)
+    if (zipCode) formData.set("zip_code", zipCode)
     formData.set("project_type", projectType)
     if (description.trim()) {
       formData.set("description", description.trim())
@@ -236,21 +240,6 @@ export default function StartPage() {
                       className="mt-1.5 [&>*]:w-full [&>*]:rounded-md [&>*]:border [&>*]:border-input [&>*]:bg-background [&>*]:px-3 [&>*]:py-2 [&>*]:text-sm [&>*]:text-foreground"
                     />
                     <input type="hidden" name="address" value={address} />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="zip_code">Zip code</Label>
-                    <Input
-                      id="zip_code"
-                      placeholder="94301"
-                      value={zipCode}
-                      onChange={(e) => setZipCode(e.target.value)}
-                      maxLength={5}
-                      className="mt-1.5"
-                    />
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Palo Alto only: 94301, 94303, 94304, 94306
-                    </p>
                   </div>
 
                   <div>
