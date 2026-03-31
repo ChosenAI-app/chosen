@@ -28,6 +28,9 @@ export async function createHomeownerProject(formData: FormData): Promise<{
   const description =
     (formData.get("description") as string | null)?.trim() || null
 
+  const formLat = formData.get("lat") as string | null
+  const formLng = formData.get("lng") as string | null
+
   const fireWestOf280 = formData.get("fire_west_of_280") === "yes"
   const fireSprinklersExist = formData.get("fire_sprinklers_exist") === "yes"
   const hasEarthwork = formData.get("has_earthwork") === "yes"
@@ -114,6 +117,16 @@ export async function createHomeownerProject(formData: FormData): Promise<{
   } catch (err) {
     console.error("[Regrid] Fetch failed:", err)
     // Continue without parcel data — non-blocking
+  }
+
+  // Fallback: use Google Places lat/lng if Regrid returned no coordinates
+  if (mapLat === null && formLat) {
+    mapLat = parseFloat(formLat)
+    if (isNaN(mapLat)) mapLat = null
+  }
+  if (mapLng === null && formLng) {
+    mapLng = parseFloat(formLng)
+    if (isNaN(mapLng)) mapLng = null
   }
 
   // Insert homeowner project

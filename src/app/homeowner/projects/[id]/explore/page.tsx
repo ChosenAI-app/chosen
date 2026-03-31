@@ -2,8 +2,10 @@ import { createClient } from "@/lib/supabase/server"
 import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import { StatusBadge } from "@/components/ui/status-badge"
+import { ScopePoller } from "@/components/homeowner/ScopePoller"
+import { ProjectChatWindow } from "@/components/homeowner/ProjectChatWindow"
+import { MapSection } from "@/components/homeowner/MapSection"
 import {
-  MapPin,
   ArrowLeft,
   DollarSign,
   Clock,
@@ -52,6 +54,7 @@ export default async function ExplorePage({
 
   const hp = project as HomeownerProject
   const isProcessing = hp.status === "ai_processing"
+  const isScopeReady = hp.status === "scope_ready"
 
   return (
     <div className="flex flex-col gap-6">
@@ -77,26 +80,22 @@ export default async function ExplorePage({
 
       {/* Two-column layout */}
       <div className="grid gap-6 lg:grid-cols-12">
-        {/* Left — map placeholder */}
-        <div className="lg:col-span-7">
-          <div className="flex aspect-[4/3] w-full items-center justify-center rounded-lg border-2 border-dashed border-primary/30 bg-card/50">
-            <div className="text-center">
-              <MapPin className="mx-auto size-10 text-primary/40" />
-              <p className="mt-3 text-sm font-medium text-muted-foreground">
-                3D Map — Phase 3
-              </p>
-              {hp.map_lat && hp.map_lng && (
-                <p className="mt-1 text-xs text-muted-foreground/60">
-                  {Number(hp.map_lat).toFixed(5)},{" "}
-                  {Number(hp.map_lng).toFixed(5)}
-                </p>
-              )}
-            </div>
+        {/* Left — map + chat */}
+        <div className="flex flex-col gap-4 lg:col-span-7">
+          {/* Map */}
+          <div className="relative min-h-[500px] overflow-hidden rounded-lg border border-border">
+            <MapSection
+              lat={hp.map_lat !== null ? Number(hp.map_lat) : null}
+              lng={hp.map_lng !== null ? Number(hp.map_lng) : null}
+              parcelGeometry={hp.parcel_geometry}
+              apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}
+              isProcessing={isProcessing}
+            />
           </div>
 
           {/* Property data */}
           {(hp.lot_size_sqft || hp.zoning || hp.year_built) && (
-            <div className="mt-4 rounded-md border border-border bg-card p-4">
+            <div className="rounded-md border border-border bg-card p-4">
               <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Property Data
               </h3>
@@ -136,26 +135,15 @@ export default async function ExplorePage({
               </div>
             </div>
           )}
+
+          {/* Chat window — only when scope is ready */}
+          {isScopeReady && <ProjectChatWindow projectId={hp.id} />}
         </div>
 
         {/* Right — AI Scope Panel */}
         <div className="flex flex-col gap-4 lg:col-span-5">
           {isProcessing ? (
-            <div className="rounded-lg border border-border bg-card p-6">
-              <div className="flex flex-col items-center py-8">
-                <div className="size-10 animate-pulse rounded-full bg-primary/20" />
-                <p className="mt-4 font-semibold">
-                  Analyzing your property...
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  AI is generating your project scope, permits, and cost
-                  estimates. This usually takes under 60 seconds.
-                </p>
-                <p className="mt-4 text-xs text-muted-foreground">
-                  Refresh the page to check for updates.
-                </p>
-              </div>
-            </div>
+            <ScopePoller projectId={hp.id} />
           ) : (
             <>
               {/* Scope summary */}

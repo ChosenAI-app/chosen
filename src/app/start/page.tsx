@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useEffect, useRef } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +15,13 @@ import {
 } from "@/components/ui/select"
 import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react"
 import { createHomeownerProject } from "@/lib/actions/homeowner-projects"
+
+declare global {
+  interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    google: any
+  }
+}
 
 const PALO_ALTO_ZIPS = new Set(["94301", "94303", "94304", "94306"])
 
@@ -37,12 +44,73 @@ export default function StartPage() {
   const [projectType, setProjectType] = useState("")
   const [description, setDescription] = useState("")
 
+  // Google Places lat/lng
+  const [placeLat, setPlaceLat] = useState("")
+  const [placeLng, setPlaceLng] = useState("")
+
   // Step 2 fields
   const [fireWestOf280, setFireWestOf280] = useState<"yes" | "no" | "">("")
   const [fireSprinklersExist, setFireSprinklersExist] = useState<
     "yes" | "no" | ""
   >("")
   const [hasEarthwork, setHasEarthwork] = useState<"yes" | "no" | "">("")
+
+  const addressInputRef = useRef<HTMLInputElement>(null)
+
+  // Google Places Autocomplete setup
+  useEffect(() => {
+    function initAutocomplete() {
+      if (!addressInputRef.current || !window.google?.maps?.places) return
+
+      const autocomplete = new window.google.maps.places.Autocomplete(
+        addressInputRef.current,
+        {
+          componentRestrictions: { country: "us" },
+          fields: ["formatted_address", "geometry", "address_components"],
+          types: ["address"],
+        }
+      )
+
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace()
+        if (!place.geometry?.location) return
+
+        // Set address
+        if (place.formatted_address) {
+          setAddress(place.formatted_address)
+        }
+
+        // Set lat/lng
+        const lat = place.geometry.location.lat()
+        const lng = place.geometry.location.lng()
+        setPlaceLat(lat.toString())
+        setPlaceLng(lng.toString())
+
+        // Extract postal code
+        if (place.address_components) {
+          for (const component of place.address_components) {
+            if (component.types?.includes("postal_code")) {
+              setZipCode(component.long_name)
+              break
+            }
+          }
+        }
+      })
+    }
+
+    // Poll for Google Maps to load
+    if (window.google?.maps?.places) {
+      initAutocomplete()
+    } else {
+      const interval = setInterval(() => {
+        if (window.google?.maps?.places) {
+          clearInterval(interval)
+          initAutocomplete()
+        }
+      }, 200)
+      return () => clearInterval(interval)
+    }
+  }, [])
 
   function handleNext() {
     setError(null)
@@ -86,6 +154,8 @@ export default function StartPage() {
     formData.set("fire_west_of_280", fireWestOf280)
     formData.set("fire_sprinklers_exist", fireSprinklersExist)
     formData.set("has_earthwork", hasEarthwork)
+    if (placeLat) formData.set("lat", placeLat)
+    if (placeLng) formData.set("lng", placeLng)
 
     startTransition(async () => {
       const result = await createHomeownerProject(formData)
@@ -138,8 +208,9 @@ export default function StartPage() {
                   <div>
                     <Label htmlFor="address">Street address</Label>
                     <Input
+                      ref={addressInputRef}
                       id="address"
-                      placeholder="123 Main St, Palo Alto, CA"
+                      placeholder="Start typing a Palo Alto address..."
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       className="mt-1.5"
