@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { signOut } from "@/lib/actions/auth"
 import { Button } from "@/components/ui/button"
+import { CesiumScriptLoader } from "@/components/homeowner/CesiumScriptLoader"
 
 export default async function HomeownerLayout({
   children,
@@ -61,6 +62,7 @@ export default async function HomeownerLayout({
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
         {children}
       </main>
+      <CesiumScriptLoader />
     </div>
   )
 }

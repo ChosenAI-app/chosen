@@ -25,75 +25,21 @@ export default function ProjectExploreMap({
   const containerRef = useRef<HTMLDivElement>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const viewerRef = useRef<any>(null)
+  const initializedRef = useRef(false)
 
   useEffect(() => {
-    let destroyed = false
-
-    async function loadCesiumAndInit() {
-      // If Cesium already loaded (e.g. navigating back to page)
-      if (window.Cesium) {
-        initViewer()
-        return
-      }
-
-      // Inject CSS
-      if (!document.querySelector('link[href*="cesiumjs"]')) {
-        const link = document.createElement("link")
-        link.rel = "stylesheet"
-        link.href =
-          "https://ajax.googleapis.com/ajax/libs/cesiumjs/1.124/Build/Cesium/Widgets/widgets.css"
-        document.head.appendChild(link)
-      }
-
-      // Inject JS script tag
-      await new Promise<void>((resolve, reject) => {
-        if (window.Cesium) {
-          resolve()
-          return
-        }
-
-        const existing = document.querySelector('script[src*="cesiumjs"]')
-        if (existing) {
-          // Script tag exists but Cesium not ready yet — poll
-          let polls = 0
-          const poll = setInterval(() => {
-            polls++
-            if (window.Cesium) {
-              clearInterval(poll)
-              resolve()
-            }
-            if (polls > 60) {
-              clearInterval(poll)
-              reject(new Error("Cesium poll timeout"))
-            }
-          }, 500)
-          return
-        }
-
-        const script = document.createElement("script")
-        script.src =
-          "https://ajax.googleapis.com/ajax/libs/cesiumjs/1.124/Build/Cesium/Cesium.js"
-        script.async = true
-        script.onload = () => resolve()
-        script.onerror = () =>
-          reject(new Error("CesiumJS script failed to load"))
-        document.head.appendChild(script)
-      })
-
-      if (!destroyed) initViewer()
-    }
+    let pollInterval: NodeJS.Timeout | null = null
+    let pollCount = 0
+    const MAX_POLLS = 120 // 60 seconds at 500ms
 
     function initViewer() {
-      if (
-        !containerRef.current ||
-        viewerRef.current ||
-        !window.Cesium ||
-        destroyed
-      )
-        return
+      if (initializedRef.current) return
+      if (!containerRef.current || !window.Cesium) return
+      initializedRef.current = true
+
+      const Cesium = window.Cesium
 
       try {
-        const Cesium = window.Cesium
         Cesium.RequestScheduler.requestsByServer["tile.googleapis.com:443"] = 18
 
         const viewer = new Cesium.Viewer(containerRef.current, {
@@ -116,7 +62,6 @@ export default function ProjectExploreMap({
 
         Cesium.createGooglePhotorealistic3DTileset({ key: apiKey })
           .then((tileset: unknown) => {
-            if (destroyed) return
             viewer.scene.primitives.add(tileset)
 
             // Stage 1 fly-in
@@ -129,7 +74,6 @@ export default function ProjectExploreMap({
               },
               duration: 2.5,
               complete: () => {
-                if (destroyed) return
                 // Stage 2 fly-in
                 viewer.camera.flyTo({
                   destination: Cesium.Cartesian3.fromDegrees(lng, lat, 150),
@@ -143,7 +87,7 @@ export default function ProjectExploreMap({
               },
             })
 
-            // Draw parcel polygon if available
+            // Draw amber parcel polygon
             if (parcelGeometry) {
               try {
                 const geom = parcelGeometry as {
@@ -172,32 +116,71 @@ export default function ProjectExploreMap({
                   })
                 }
               } catch (e) {
-                console.error("[CesiumJS] Parcel polygon error:", e)
+                console.error("[CesiumJS] Polygon error:", e)
               }
             }
           })
           .catch((err: unknown) =>
-            console.error("[CesiumJS] 3D Tiles failed:", err)
+            console.error("[CesiumJS] 3D Tiles error:", err)
           )
       } catch (err) {
-        console.error("[CesiumJS] Viewer init failed:", err)
+        console.error("[CesiumJS] Viewer init error:", err)
+        initializedRef.current = false
       }
     }
 
-    loadCesiumAndInit().catch((err) =>
-      console.error("[CesiumJS] Load error:", err)
-    )
+    // If Cesium already loaded before this component mounted
+    if (window.Cesium) {
+      initViewer()
+      return () => {
+        if (pollInterval) clearInterval(pollInterval)
+        if (viewerRef.current) {
+          try {
+            viewerRef.current.destroy()
+          } catch {
+            // ignore
+          }
+          viewerRef.current = null
+        }
+        initializedRef.current = false
+      }
+    }
+
+    // Listen for the onLoad event from the Script tag
+    function onCesiumLoaded() {
+      if (pollInterval) clearInterval(pollInterval)
+      initViewer()
+    }
+    window.addEventListener("cesium-loaded", onCesiumLoaded)
+
+    // Also poll as fallback
+    pollInterval = setInterval(() => {
+      pollCount++
+      if (window.Cesium) {
+        clearInterval(pollInterval!)
+        window.removeEventListener("cesium-loaded", onCesiumLoaded)
+        initViewer()
+      } else if (pollCount >= MAX_POLLS) {
+        clearInterval(pollInterval!)
+        window.removeEventListener("cesium-loaded", onCesiumLoaded)
+        console.error(
+          "[CesiumJS] Timed out waiting for script. Check network tab."
+        )
+      }
+    }, 500)
 
     return () => {
-      destroyed = true
+      window.removeEventListener("cesium-loaded", onCesiumLoaded)
+      if (pollInterval) clearInterval(pollInterval)
       if (viewerRef.current) {
         try {
           viewerRef.current.destroy()
         } catch {
-          // ignore destroy errors
+          // ignore
         }
         viewerRef.current = null
       }
+      initializedRef.current = false
     }
   }, [lat, lng, parcelGeometry, apiKey])
 
