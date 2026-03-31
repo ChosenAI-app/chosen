@@ -1,0 +1,7 @@
+{
+    "_note": "PHASE 5 TASK: Download actual Palo Alto permit PDFs from cityofpaloalto.org and catalog every form field. See CLAUDE.md Phase 5 instructions.",
+    "building_permit_adu": {
+      "ai_fillable": [],
+      "human_required": []
+    }
+  }

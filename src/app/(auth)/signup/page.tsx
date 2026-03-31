@@ -16,12 +16,13 @@ export default function SignupPage() {
     setError(null);
 
     const formData = new FormData(e.currentTarget);
-    const fullName = formData.get("fullName") as string;
+    const firstName = (formData.get("firstName") as string).trim();
+    const lastName = (formData.get("lastName") as string).trim();
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
     startTransition(async () => {
-      const result = await signUp(email, password, fullName);
+      const result = await signUp(email, password, `${firstName} ${lastName}`);
       if (result?.error) {
         setError(result.error);
       }
@@ -41,21 +42,39 @@ export default function SignupPage() {
       </p>
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
-        <div className="flex flex-col gap-1.5">
-          <Label
-            htmlFor="fullName"
-            className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
-          >
-            Full name
-          </Label>
-          <Input
-            id="fullName"
-            name="fullName"
-            type="text"
-            placeholder="Jane Smith"
-            required
-            autoComplete="name"
-          />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label
+              htmlFor="firstName"
+              className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
+            >
+              First name
+            </Label>
+            <Input
+              id="firstName"
+              name="firstName"
+              type="text"
+              placeholder="Jane"
+              required
+              autoComplete="given-name"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label
+              htmlFor="lastName"
+              className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
+            >
+              Last name
+            </Label>
+            <Input
+              id="lastName"
+              name="lastName"
+              type="text"
+              placeholder="Smith"
+              required
+              autoComplete="family-name"
+            />
+          </div>
         </div>
         <div className="flex flex-col gap-1.5">
           <Label
