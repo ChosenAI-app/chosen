@@ -113,3 +113,12 @@
   border-top: 1px solid oklch(0.27 0.01 250);
   margin: 1.5rem 0;
 }
+
+/* Google PlaceAutocompleteElement dark theme override */
+gmp-placeautocomplete {
+  --gmp-material-container-color: hsl(220 13% 10%);
+  --gmp-on-surface: hsl(220 9% 92%);
+  --gmp-on-surface-variant: hsl(220 9% 52%);
+  --gmp-outline: hsl(220 13% 16%);
+  width: 100%;
+}

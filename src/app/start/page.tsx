@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition, useEffect, useRef } from "react"
+import { useState, useTransition, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -55,59 +55,76 @@ export default function StartPage() {
   >("")
   const [hasEarthwork, setHasEarthwork] = useState<"yes" | "no" | "">("")
 
-  const addressInputRef = useRef<HTMLInputElement>(null)
-
-  // Google Places Autocomplete setup
+  // Google Places PlaceAutocompleteElement setup
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null
     let attempts = 0
-    const MAX_ATTEMPTS = 100 // 10 seconds at 100ms
+    const MAX_ATTEMPTS = 100
 
-    function initAutocomplete(): boolean {
-      if (!addressInputRef.current || !window.google?.maps?.places) return false
+    function initPlaceAutocomplete(): boolean {
+      if (!window.google?.maps?.places?.PlaceAutocompleteElement) return false
 
-      const autocomplete = new window.google.maps.places.Autocomplete(
-        addressInputRef.current,
-        {
+      const container = document.getElementById("place-autocomplete-container")
+      if (!container || container.children.length > 0) return true
+
+      const placeAutocomplete =
+        new window.google.maps.places.PlaceAutocompleteElement({
           componentRestrictions: { country: "us" },
-          fields: ["formatted_address", "geometry", "address_components"],
           types: ["address"],
-        }
-      )
+        })
 
-      autocomplete.addListener("place_changed", () => {
-        const place = autocomplete.getPlace()
-        if (!place.geometry?.location) return
+      placeAutocomplete.style.width = "100%"
+      container.appendChild(placeAutocomplete)
 
-        if (place.formatted_address) {
-          setAddress(place.formatted_address)
-          if (addressInputRef.current) {
-            addressInputRef.current.value = place.formatted_address
+      placeAutocomplete.addEventListener(
+        "gmp-placeselect",
+        async (event: Event) => {
+          const placeEvent = event as CustomEvent & {
+            place: {
+              fetchFields: (opts: { fields: string[] }) => Promise<void>
+              formattedAddress?: string
+              location?: { lat: () => number; lng: () => number }
+              addressComponents?: Array<{
+                types: string[]
+                longText: string
+              }>
+            }
           }
-        }
 
-        const lat = place.geometry.location.lat()
-        const lng = place.geometry.location.lng()
-        setPlaceLat(lat.toString())
-        setPlaceLng(lng.toString())
+          const place = placeEvent.place
 
-        if (place.address_components) {
-          for (const component of place.address_components) {
-            if (component.types?.includes("postal_code")) {
-              setZipCode(component.long_name)
-              break
+          await place.fetchFields({
+            fields: ["formattedAddress", "location", "addressComponents"],
+          })
+
+          if (place.formattedAddress) {
+            setAddress(place.formattedAddress)
+          }
+
+          if (place.location) {
+            setPlaceLat(place.location.lat().toString())
+            setPlaceLng(place.location.lng().toString())
+          }
+
+          if (place.addressComponents) {
+            for (const component of place.addressComponents) {
+              if (component.types?.includes("postal_code")) {
+                setZipCode(component.longText)
+                break
+              }
             }
           }
         }
-      })
+      )
+
       return true
     }
 
-    if (initAutocomplete()) return
+    if (initPlaceAutocomplete()) return
 
     interval = setInterval(() => {
       attempts++
-      if (initAutocomplete() || attempts >= MAX_ATTEMPTS) {
+      if (initPlaceAutocomplete() || attempts >= MAX_ATTEMPTS) {
         if (interval) clearInterval(interval)
       }
     }, 100)
@@ -210,16 +227,15 @@ export default function StartPage() {
                 </p>
 
                 <div className="mt-6 flex flex-col gap-5">
-                  <div>
-                    <Label htmlFor="address">Street address</Label>
-                    <Input
-                      ref={addressInputRef}
-                      id="address"
-                      placeholder="Start typing a Palo Alto address..."
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      className="mt-1.5"
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      Street address
+                    </Label>
+                    <div
+                      id="place-autocomplete-container"
+                      className="mt-1.5 [&>*]:w-full [&>*]:rounded-md [&>*]:border [&>*]:border-input [&>*]:bg-background [&>*]:px-3 [&>*]:py-2 [&>*]:text-sm [&>*]:text-foreground"
                     />
+                    <input type="hidden" name="address" value={address} />
                   </div>
 
                   <div>
