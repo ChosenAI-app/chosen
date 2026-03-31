@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { getUploadUrl, recordUpload } from "@/lib/actions/documents";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Paperclip } from "lucide-react";
 
 interface FileUploadButtonProps {
   projectId: string;
@@ -27,7 +28,6 @@ export function FileUploadButton({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Step 1: client-side validation
     if (file.size > 20 * 1024 * 1024) {
       setError("File must be under 20MB");
       return;
@@ -46,8 +46,7 @@ export function FileUploadButton({
     setIsUploading(true);
     setError(null);
 
-    // Step 2: get signed URL from server
-    setStatus("Preparing upload...");
+    setStatus("Preparing...");
     const {
       token,
       path,
@@ -65,7 +64,6 @@ export function FileUploadButton({
       return;
     }
 
-    // Step 3: upload directly to Supabase from browser
     setStatus("Uploading...");
     const browserClient = createClient();
     const { error: uploadError } = await browserClient.storage
@@ -77,7 +75,6 @@ export function FileUploadButton({
       return;
     }
 
-    // Step 4: record in database
     setStatus("Saving...");
     const { error: recordError } = await recordUpload({
       projectId,
@@ -111,8 +108,10 @@ export function FileUploadButton({
         size="sm"
         disabled={isUploading}
         onClick={() => fileInputRef.current?.click()}
+        className="h-7 gap-1.5 text-xs transition-all duration-150"
       >
-        {isUploading ? status || "Uploading..." : "Upload File"}
+        <Paperclip className="size-3" />
+        {isUploading ? status || "Uploading..." : "Upload"}
       </Button>
       {error && (
         <p className="text-xs text-destructive">{error}</p>

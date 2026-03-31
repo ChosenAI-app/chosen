@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { PermitDocumentSection } from "@/components/documents/PermitDocumentSection";
 import { getUserRole, canViewDocuments } from "@/lib/utils/permissions";
 
@@ -42,9 +44,19 @@ export default async function DocumentsPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">
-        Documents &mdash; {project.address}
-      </h1>
+      {/* Header */}
+      <div>
+        <Link
+          href={`/projects/${id}`}
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-all duration-150"
+        >
+          <ArrowLeft className="size-3" />
+          Back to project
+        </Link>
+        <h1 className="mt-2 text-xl font-bold tracking-tight">
+          Documents &mdash; {project.address}
+        </h1>
+      </div>
 
       {permits && permits.length > 0 ? (
         permits.map((permit) => {

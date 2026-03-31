@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { PermitStatusSelect } from "@/components/permits/PermitStatusSelect";
 import { DeleteProjectButton } from "@/components/permits/DeleteProjectButton";
 import { InviteTeamMemberForm } from "@/components/team/InviteTeamMemberForm";
@@ -14,7 +14,7 @@ import {
   canUpdatePermitStatus,
   canViewTeam,
 } from "@/lib/utils/permissions";
-import { getStatusVariant, getStatusLabel } from "@/lib/utils/status";
+import { FileText, ClipboardList, ArrowRight } from "lucide-react";
 
 const PROJECT_TYPE_LABELS: Record<string, string> = {
   adu_detached: "Detached ADU",
@@ -74,100 +74,167 @@ export default async function ProjectDetailPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {project.address}
-          </h1>
-          <Badge variant="secondary">
-            {PROJECT_TYPE_LABELS[project.project_type] ?? project.project_type}
-          </Badge>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {jurisdictionName} &middot; {project.zip_code}
-        </p>
+      {/* Page header */}
+      <div>
+        <Link
+          href="/dashboard"
+          className="text-xs text-muted-foreground hover:text-foreground transition-all duration-150"
+        >
+          &larr; Back to projects
+        </Link>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight">
+          {project.address}
+        </h1>
+        <span className="mt-1 inline-block rounded-sm bg-secondary px-2 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-secondary-foreground">
+          {PROJECT_TYPE_LABELS[project.project_type] ?? project.project_type}
+        </span>
       </div>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-medium">Permits</h2>
-        {permits && permits.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            {permits.map((permit) => {
-              const permitType = permit.permit_types as {
-                name: string;
-                description: string | null;
-              } | null;
+      {/* 2-column layout */}
+      <div className="grid gap-6 lg:grid-cols-12">
+        {/* Left column — permits + links */}
+        <div className="flex flex-col gap-6 lg:col-span-7">
+          {/* Permits section */}
+          <section>
+            <div className="mb-4 flex items-center gap-3">
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Permits
+              </h2>
+              <div className="h-px flex-1 bg-border" />
+            </div>
 
-              return (
-                <div
-                  key={permit.id}
-                  className="flex items-center justify-between rounded-lg border px-4 py-3"
-                >
-                  <div>
-                    <p className="text-sm font-medium">
-                      {permitType?.name ?? "Unknown Permit"}
-                    </p>
-                    {permitType?.description && (
-                      <p className="text-xs text-muted-foreground">
-                        {permitType.description}
-                      </p>
-                    )}
-                  </div>
-                  {userCanUpdateStatus ? (
-                    <PermitStatusSelect
-                      projectPermitId={permit.id}
-                      projectId={id}
-                      currentStatus={permit.status}
-                    />
-                  ) : (
-                    <Badge variant={getStatusVariant(permit.status)}>
-                      {getStatusLabel(permit.status)}
-                    </Badge>
-                  )}
-                </div>
-              );
-            })}
+            {permits && permits.length > 0 ? (
+              <div className="flex flex-col">
+                {permits.map((permit) => {
+                  const permitType = permit.permit_types as {
+                    name: string;
+                    description: string | null;
+                  } | null;
+
+                  return (
+                    <div
+                      key={permit.id}
+                      className="flex items-center justify-between border-b border-border/50 py-3 last:border-b-0"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-foreground">
+                          {permitType?.name ?? "Unknown Permit"}
+                        </p>
+                        {permitType?.description && (
+                          <p className="mt-0.5 truncate text-sm text-muted-foreground">
+                            {permitType.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="ml-4 shrink-0">
+                        {userCanUpdateStatus ? (
+                          <PermitStatusSelect
+                            projectPermitId={permit.id}
+                            projectId={id}
+                            currentStatus={permit.status}
+                          />
+                        ) : (
+                          <StatusBadge status={permit.status} />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No permits generated for this project.
+              </p>
+            )}
+          </section>
+
+          {/* Navigation links */}
+          <div className="flex flex-col gap-3">
+            <Link
+              href={`/projects/${id}/documents`}
+              className="group flex items-center justify-between rounded-md border border-border bg-card px-5 py-4 transition-all duration-150 hover:border-primary/30"
+            >
+              <div className="flex items-center gap-3">
+                <FileText className="size-4 text-muted-foreground" />
+                <span className="font-medium">Manage Documents</span>
+              </div>
+              <ArrowRight className="size-4 text-muted-foreground transition-transform duration-150 group-hover:translate-x-0.5" />
+            </Link>
+            <Link
+              href={`/projects/${id}/inspections`}
+              className="group flex items-center justify-between rounded-md border border-border bg-card px-5 py-4 transition-all duration-150 hover:border-primary/30"
+            >
+              <div className="flex items-center gap-3">
+                <ClipboardList className="size-4 text-muted-foreground" />
+                <span className="font-medium">View Inspection Sequence</span>
+              </div>
+              <ArrowRight className="size-4 text-muted-foreground transition-transform duration-150 group-hover:translate-x-0.5" />
+            </Link>
           </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            No permits generated for this project.
-          </p>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-medium">Documents</h2>
-        <Button variant="outline" className="w-full" asChild>
-          <Link href={`/projects/${id}/documents`}>Manage Documents &rarr;</Link>
-        </Button>
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-medium">Inspections</h2>
-        <Button variant="outline" className="w-full" asChild>
-          <Link href={`/projects/${id}/inspections`}>
-            View Inspection Sequence &rarr;
-          </Link>
-        </Button>
-      </section>
-
-      {userCanViewTeam && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-medium">Team</h2>
-          {userCanManageTeam && <InviteTeamMemberForm projectId={id} />}
-          <TeamMemberList
-            projectId={id}
-            currentUserId={user.id}
-            canManage={userCanManageTeam}
-          />
-        </section>
-      )}
-
-      {userCanDelete && (
-        <div className="mt-8 border-t pt-6">
-          <DeleteProjectButton projectId={id} />
         </div>
-      )}
+
+        {/* Right column — metadata + team */}
+        <div className="flex flex-col gap-6 lg:sticky lg:top-6 lg:col-span-5 lg:self-start">
+          {/* Project Info */}
+          <div className="rounded-md border border-border bg-card p-5">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Project Info
+            </h3>
+            <div className="mt-4 flex flex-col gap-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Jurisdiction</p>
+                <p className="mt-0.5 text-sm font-medium">{jurisdictionName}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Zip Code</p>
+                <p className="mt-0.5 text-sm font-medium">{project.zip_code}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Created</p>
+                <p className="mt-0.5 text-sm font-medium">
+                  {new Date(project.created_at).toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </p>
+              </div>
+              {project.scope_description && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Scope</p>
+                  <p className="mt-0.5 text-sm text-foreground">
+                    {project.scope_description}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Team */}
+          {userCanViewTeam && (
+            <div className="rounded-md border border-border bg-card p-5">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Team
+              </h3>
+              <div className="mt-4 flex flex-col gap-4">
+                {userCanManageTeam && <InviteTeamMemberForm projectId={id} />}
+                <TeamMemberList
+                  projectId={id}
+                  currentUserId={user.id}
+                  canManage={userCanManageTeam}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Delete */}
+          {userCanDelete && (
+            <div className="pt-2">
+              <DeleteProjectButton projectId={id} />
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

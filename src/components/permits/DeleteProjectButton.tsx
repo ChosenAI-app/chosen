@@ -13,7 +13,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 
 interface DeleteProjectButtonProps {
   projectId: string;
@@ -31,7 +30,9 @@ export function DeleteProjectButton({ projectId }: DeleteProjectButtonProps) {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="destructive">Delete Project</Button>
+        <button className="text-sm text-destructive transition-all duration-150 hover:underline">
+          Delete this project
+        </button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>

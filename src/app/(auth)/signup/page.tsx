@@ -4,12 +4,6 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { signUp } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -35,59 +29,86 @@ export default function SignupPage() {
   }
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader>
-        <CardTitle className="text-xl">Create your account</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="fullName">Full name</Label>
-            <Input
-              id="fullName"
-              name="fullName"
-              type="text"
-              placeholder="Jane Smith"
-              required
-              autoComplete="name"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="you@example.com"
-              required
-              autoComplete="email"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              placeholder="••••••••"
-              required
-              autoComplete="new-password"
-            />
-          </div>
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
-          <Button type="submit" disabled={isPending}>
-            {isPending ? "Loading..." : "Sign up"}
-          </Button>
-          <p className="text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link href="/login" className="text-foreground underline underline-offset-4">
-              Log in
-            </Link>
-          </p>
-        </form>
-      </CardContent>
-    </Card>
+    <div className="w-full max-w-sm">
+      {/* Mobile-only branding */}
+      <p className="mb-8 text-xs font-bold tracking-[0.25em] text-foreground lg:hidden">
+        CHOSEN
+      </p>
+
+      <h1 className="text-xl font-bold tracking-tight">Create your account</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Start managing your permit workflows
+      </p>
+
+      <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
+        <div className="flex flex-col gap-1.5">
+          <Label
+            htmlFor="fullName"
+            className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
+          >
+            Full name
+          </Label>
+          <Input
+            id="fullName"
+            name="fullName"
+            type="text"
+            placeholder="Jane Smith"
+            required
+            autoComplete="name"
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label
+            htmlFor="email"
+            className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
+          >
+            Email
+          </Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="you@example.com"
+            required
+            autoComplete="email"
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label
+            htmlFor="password"
+            className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
+          >
+            Password
+          </Label>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            placeholder="••••••••"
+            required
+            autoComplete="new-password"
+          />
+        </div>
+        {error && (
+          <p className="text-sm text-destructive">{error}</p>
+        )}
+        <Button
+          type="submit"
+          disabled={isPending}
+          className="w-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-150"
+        >
+          {isPending ? "Loading..." : "Sign up"}
+        </Button>
+        <p className="text-center text-sm text-muted-foreground">
+          Already have an account?{" "}
+          <Link
+            href="/login"
+            className="text-foreground underline underline-offset-4 transition-all duration-150 hover:text-primary"
+          >
+            Log in
+          </Link>
+        </p>
+      </form>
+    </div>
   );
 }

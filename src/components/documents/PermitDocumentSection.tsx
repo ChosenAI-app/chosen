@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { DocumentChecklistItem } from "@/components/documents/DocumentChecklistItem";
-import { Badge } from "@/components/ui/badge";
-import { getStatusVariant, getStatusLabel } from "@/lib/utils/status";
+import { StatusBadge } from "@/components/ui/status-badge";
 import type { ProjectRole } from "@/lib/utils/permissions";
 import type { PermitRequirement, ProjectDocument } from "@/lib/types";
 
@@ -51,15 +50,25 @@ export async function PermitDocumentSection({
     docsByRequirement.set(doc.permit_requirement_id, doc);
   }
 
+  const uploadedCount = requirements.filter((r) =>
+    docsByRequirement.has(r.id)
+  ).length;
+
   return (
-    <section className="flex flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <h2 className="text-base font-medium">{permitTypeName}</h2>
-        <Badge variant={getStatusVariant(permitStatus)}>
-          {getStatusLabel(permitStatus)}
-        </Badge>
+    <section className="rounded-md border border-border bg-card">
+      {/* Section header */}
+      <div className="flex items-center justify-between border-b border-border/50 px-5 py-3">
+        <div className="flex items-center gap-3">
+          <h2 className="font-medium text-foreground">{permitTypeName}</h2>
+          <StatusBadge status={permitStatus} />
+        </div>
+        <span className="text-xs text-muted-foreground">
+          {uploadedCount}/{requirements.length} docs
+        </span>
       </div>
-      <div className="flex flex-col gap-2">
+
+      {/* Document rows */}
+      <div className="divide-y divide-border/50">
         {requirements.map((req) => (
           <DocumentChecklistItem
             key={req.id}

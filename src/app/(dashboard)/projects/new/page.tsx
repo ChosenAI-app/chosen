@@ -4,12 +4,6 @@ import { useTransition, useState } from "react";
 import { createProject } from "@/lib/actions/projects";
 import { isPaloAltoZip, normalizeZip } from "@/lib/utils/jurisdiction";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -95,20 +89,53 @@ export default function NewProjectPage() {
   }
 
   return (
-    <div className="flex justify-center">
-      <Card className="w-full max-w-2xl">
-        <CardHeader>
-          <CardTitle className="text-xl">New Project</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="mb-4 text-xs text-muted-foreground">
-            Step {step} of 2
+    <div className="flex justify-center py-8">
+      <div className="w-full max-w-lg">
+        {/* Step indicator */}
+        <div className="mb-8 flex items-center justify-center gap-0">
+          <div
+            className={`flex size-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-150 ${
+              step >= 1
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary text-muted-foreground"
+            }`}
+          >
+            1
+          </div>
+          <div
+            className={`h-px w-16 transition-all duration-150 ${
+              step >= 2 ? "bg-primary" : "bg-border"
+            }`}
+          />
+          <div
+            className={`flex size-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-150 ${
+              step >= 2
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary text-muted-foreground"
+            }`}
+          >
+            2
+          </div>
+        </div>
+
+        <div className="rounded-md border border-border bg-card p-6">
+          <h1 className="text-xl font-bold tracking-tight">New Project</h1>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Step {step} of 2 &mdash;{" "}
+            {step === 1 ? "Project details" : "Additional questions"}
           </p>
 
+          <div className="section-divider" />
+
           {step === 1 && (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-5">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="address">Street address</Label>
+                <Label
+                  htmlFor="address"
+                  className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
+                >
+                  Street address
+                </Label>
                 <Input
                   id="address"
                   type="text"
@@ -122,7 +149,12 @@ export default function NewProjectPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="zip_code">Zip code</Label>
+                <Label
+                  htmlFor="zip_code"
+                  className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
+                >
+                  Zip code
+                </Label>
                 <Input
                   id="zip_code"
                   type="text"
@@ -140,7 +172,9 @@ export default function NewProjectPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label>Project type</Label>
+                <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Project type
+                </Label>
                 <Select
                   value={step1Data.project_type}
                   onValueChange={(v) =>
@@ -161,9 +195,12 @@ export default function NewProjectPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="scope_description">
+                <Label
+                  htmlFor="scope_description"
+                  className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
+                >
                   Scope description{" "}
-                  <span className="font-normal text-muted-foreground">
+                  <span className="normal-case tracking-normal text-muted-foreground">
                     (optional)
                   </span>
                 </Label>
@@ -182,12 +219,17 @@ export default function NewProjectPage() {
 
               {error && <p className="text-sm text-destructive">{error}</p>}
 
-              <Button onClick={handleNext}>Next &rarr;</Button>
+              <Button
+                onClick={handleNext}
+                className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-150"
+              >
+                Next &rarr;
+              </Button>
             </div>
           )}
 
           {step === 2 && (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-5">
               <IntakeQuestions
                 projectType={step1Data.project_type}
                 answers={intakeAnswers}
@@ -199,6 +241,7 @@ export default function NewProjectPage() {
               <div className="flex gap-3">
                 <Button
                   variant="ghost"
+                  className="text-muted-foreground hover:text-foreground transition-all duration-150"
                   onClick={() => {
                     setError(null);
                     setStep(1);
@@ -207,7 +250,7 @@ export default function NewProjectPage() {
                   &larr; Back
                 </Button>
                 <Button
-                  className="flex-1"
+                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-150"
                   onClick={handleSubmit}
                   disabled={isPending}
                 >
@@ -216,8 +259,8 @@ export default function NewProjectPage() {
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
@@ -232,25 +275,31 @@ function YesNoToggle({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <p className="text-sm font-medium">{label}</p>
-      <div className="flex gap-2">
-        <Button
+    <div className="flex items-center justify-between gap-4 rounded-md border border-border bg-background p-4">
+      <p className="text-sm font-medium text-foreground">{label}</p>
+      <div className="flex shrink-0 gap-1.5">
+        <button
           type="button"
-          size="sm"
-          variant={value ? "default" : "outline"}
           onClick={() => onChange(true)}
+          className={`rounded-sm px-3 py-1 text-xs font-semibold transition-all duration-150 ${
+            value
+              ? "bg-primary text-primary-foreground"
+              : "bg-secondary text-muted-foreground hover:text-foreground"
+          }`}
         >
           Yes
-        </Button>
-        <Button
+        </button>
+        <button
           type="button"
-          size="sm"
-          variant={!value ? "default" : "outline"}
           onClick={() => onChange(false)}
+          className={`rounded-sm px-3 py-1 text-xs font-semibold transition-all duration-150 ${
+            !value
+              ? "bg-primary text-primary-foreground"
+              : "bg-secondary text-muted-foreground hover:text-foreground"
+          }`}
         >
           No
-        </Button>
+        </button>
       </div>
     </div>
   );
@@ -267,19 +316,19 @@ function IntakeQuestions({
 }) {
   if (projectType === "adu_detached") {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         <YesNoToggle
           label="Is any part of the property west of Highway 280?"
           value={answers.fireWestOf280}
           onChange={(v) => onChange({ ...answers, fireWestOf280: v })}
         />
         <YesNoToggle
-          label="Does the main house on the property have fire sprinklers?"
+          label="Does the main house have fire sprinklers?"
           value={answers.fireSprinklersExist}
           onChange={(v) => onChange({ ...answers, fireSprinklersExist: v })}
         />
         <YesNoToggle
-          label="Will the project involve earthwork, grading, or drainage changes?"
+          label="Will the project involve earthwork or drainage changes?"
           value={answers.hasEarthwork}
           onChange={(v) => onChange({ ...answers, hasEarthwork: v })}
         />
@@ -289,9 +338,9 @@ function IntakeQuestions({
 
   if (projectType === "adu_attached") {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         <YesNoToggle
-          label="Will the project involve earthwork, grading, or drainage changes?"
+          label="Will the project involve earthwork or drainage changes?"
           value={answers.hasEarthwork}
           onChange={(v) => onChange({ ...answers, hasEarthwork: v })}
         />
@@ -304,7 +353,7 @@ function IntakeQuestions({
 
   if (projectType === "addition") {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         <YesNoToggle
           label="Will the project involve earthwork or significant grading?"
           value={answers.hasEarthwork}
