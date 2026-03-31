@@ -28,16 +28,20 @@ export default function ProjectExploreMap({
 
   useEffect(() => {
     let retries = 0
-    const MAX_RETRIES = 20
+    const MAX_RETRIES = 60 // 30 seconds at 500ms
     let timeout: NodeJS.Timeout | null = null
 
     function tryInit() {
-      if (typeof window === "undefined" || !window.Cesium) {
+      if (typeof window === "undefined") return
+
+      if (!window.Cesium) {
         retries++
         if (retries < MAX_RETRIES) {
           timeout = setTimeout(tryInit, 500)
         } else {
-          console.error("[CesiumJS] Failed to load after retries")
+          console.error(
+            "[CesiumJS] Failed to load after 30 seconds — check CDN script in layout"
+          )
         }
         return
       }

@@ -39,7 +39,7 @@ export default function RootLayout({
         {/* CesiumJS from CDN — NOT npm (avoids 50MB bundle) */}
         <Script
           src="https://ajax.googleapis.com/ajax/libs/cesiumjs/1.124/Build/Cesium/Cesium.js"
-          strategy="beforeInteractive"
+          strategy="lazyOnload"
         />
         {/* Google Maps for Places Autocomplete */}
         <Script

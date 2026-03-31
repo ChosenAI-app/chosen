@@ -83,10 +83,9 @@ export async function createHomeownerProject(formData: FormData): Promise<{
   let mapLng: number | null = null
 
   try {
-    const regridQuery = normalizedZip
-      ? `${address}, Palo Alto, CA ${normalizedZip}`
-      : `${address}, Palo Alto, CA`
-    const regridUrl = `https://app.regrid.com/api/v2/parcels/typeahead?query=${encodeURIComponent(regridQuery)}&token=${process.env.REGRID_API_KEY}`
+    // Use address as-is — Places already returns a full formatted address
+    console.log("[Regrid] Querying:", address)
+    const regridUrl = `https://app.regrid.com/api/v2/parcels/typeahead?query=${encodeURIComponent(address)}&token=${process.env.REGRID_API_KEY}`
     const regridRes = await fetch(regridUrl)
     if (regridRes.ok) {
       const regridJson = await regridRes.json()

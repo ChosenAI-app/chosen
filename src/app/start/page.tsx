@@ -72,6 +72,8 @@ export default function StartPage() {
       const container = document.getElementById("place-autocomplete-container")
       if (!container || container.children.length > 0) return true
 
+      console.log("[Places] Initializing PlaceAutocompleteElement")
+
       const placeAutocomplete =
         new window.google.maps.places.PlaceAutocompleteElement({
           componentRestrictions: { country: "us" },
@@ -81,54 +83,71 @@ export default function StartPage() {
       placeAutocomplete.style.width = "100%"
       container.appendChild(placeAutocomplete)
 
-      placeAutocomplete.addEventListener(
-        "gmp-placeselect",
-        async (event: Event) => {
-          const placeEvent = event as CustomEvent & {
-            place: {
-              fetchFields: (opts: { fields: string[] }) => Promise<void>
-              formattedAddress?: string
-              location?: { lat: () => number; lng: () => number }
-              addressComponents?: Array<{
-                types: string[]
-                longText: string
-              }>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      async function handlePlaceEvent(event: any, eventName: string) {
+        console.log(`[Places] ${eventName} fired`, event)
+
+        // Handle both gmp-select (v=beta) and gmp-placeselect patterns
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let place: any
+        if (event.placePrediction) {
+          console.log("[Places] Using placePrediction.toPlace() path")
+          place = event.placePrediction.toPlace()
+        } else if (event.place) {
+          console.log("[Places] Using event.place path")
+          place = event.place
+        } else {
+          console.error("[Places] No place or placePrediction in event:", event)
+          return
+        }
+
+        await place.fetchFields({
+          fields: ["formattedAddress", "location", "addressComponents"],
+        })
+
+        console.log("[Places] place after fetchFields:", {
+          formattedAddress: place.formattedAddress,
+          location: place.location,
+          addressComponents: place.addressComponents,
+        })
+
+        if (place.formattedAddress) {
+          setAddress(place.formattedAddress)
+          selectedAddressRef.current = place.formattedAddress
+          console.log("[Places] address set:", place.formattedAddress)
+        }
+
+        if (place.location) {
+          const lat = place.location.lat().toString()
+          const lng = place.location.lng().toString()
+          setPlaceLat(lat)
+          setPlaceLng(lng)
+          selectedLatRef.current = lat
+          selectedLngRef.current = lng
+          console.log("[Places] lat/lng set:", lat, lng)
+        }
+
+        if (place.addressComponents) {
+          for (const component of place.addressComponents) {
+            if (component.types?.includes("postal_code")) {
+              setZipCode(component.longText)
+              selectedZipRef.current = component.longText
             }
-          }
-
-          const place = placeEvent.place
-
-          await place.fetchFields({
-            fields: ["formattedAddress", "location", "addressComponents"],
-          })
-
-          if (place.formattedAddress) {
-            setAddress(place.formattedAddress)
-            selectedAddressRef.current = place.formattedAddress
-          }
-
-          if (place.location) {
-            const lat = place.location.lat().toString()
-            const lng = place.location.lng().toString()
-            setPlaceLat(lat)
-            setPlaceLng(lng)
-            selectedLatRef.current = lat
-            selectedLngRef.current = lng
-          }
-
-          if (place.addressComponents) {
-            for (const component of place.addressComponents) {
-              if (component.types?.includes("postal_code")) {
-                setZipCode(component.longText)
-                selectedZipRef.current = component.longText
-              }
-              if (component.types?.includes("locality")) {
-                setPlaceCity(component.longText)
-                selectedCityRef.current = component.longText
-              }
+            if (component.types?.includes("locality")) {
+              setPlaceCity(component.longText)
+              selectedCityRef.current = component.longText
+              console.log("[Places] city set:", component.longText)
             }
           }
         }
+      }
+
+      // Listen for both event names — whichever fires first wins
+      placeAutocomplete.addEventListener("gmp-placeselect", (e: Event) =>
+        handlePlaceEvent(e, "gmp-placeselect")
+      )
+      placeAutocomplete.addEventListener("gmp-select", (e: Event) =>
+        handlePlaceEvent(e, "gmp-select")
       )
 
       return true
@@ -150,6 +169,8 @@ export default function StartPage() {
 
   function handleNext() {
     setError(null)
+    console.log("[handleNext] selectedAddressRef:", selectedAddressRef.current, "selectedCityRef:", selectedCityRef.current)
+    console.log("[handleNext] address state:", address, "placeCity state:", placeCity)
 
     if (!selectedAddressRef.current) {
       setError("Please select an address from the dropdown above.")
