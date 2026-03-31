@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition, useEffect } from "react"
+import { useState, useTransition, useEffect, useRef } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -53,6 +53,13 @@ export default function StartPage() {
   >("")
   const [hasEarthwork, setHasEarthwork] = useState<"yes" | "no" | "">("")
 
+  // Refs for synchronous access (state setters are async)
+  const selectedAddressRef = useRef("")
+  const selectedCityRef = useRef("")
+  const selectedZipRef = useRef("")
+  const selectedLatRef = useRef("")
+  const selectedLngRef = useRef("")
+
   // Google Places PlaceAutocompleteElement setup
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null
@@ -97,20 +104,27 @@ export default function StartPage() {
 
           if (place.formattedAddress) {
             setAddress(place.formattedAddress)
+            selectedAddressRef.current = place.formattedAddress
           }
 
           if (place.location) {
-            setPlaceLat(place.location.lat().toString())
-            setPlaceLng(place.location.lng().toString())
+            const lat = place.location.lat().toString()
+            const lng = place.location.lng().toString()
+            setPlaceLat(lat)
+            setPlaceLng(lng)
+            selectedLatRef.current = lat
+            selectedLngRef.current = lng
           }
 
           if (place.addressComponents) {
             for (const component of place.addressComponents) {
               if (component.types?.includes("postal_code")) {
                 setZipCode(component.longText)
+                selectedZipRef.current = component.longText
               }
               if (component.types?.includes("locality")) {
                 setPlaceCity(component.longText)
+                selectedCityRef.current = component.longText
               }
             }
           }
@@ -137,17 +151,15 @@ export default function StartPage() {
   function handleNext() {
     setError(null)
 
-    if (!address.trim()) {
+    if (!selectedAddressRef.current) {
       setError("Please select an address from the dropdown above.")
       return
     }
 
-    if (!placeCity) {
-      setError("Please select an address from the dropdown above.")
-      return
-    }
-
-    if (placeCity !== "Palo Alto") {
+    if (
+      selectedCityRef.current &&
+      selectedCityRef.current !== "Palo Alto"
+    ) {
       setError(
         "Chosen currently serves Palo Alto only. Support for more cities coming soon."
       )
@@ -171,8 +183,9 @@ export default function StartPage() {
     }
 
     const formData = new FormData()
-    formData.set("address", address.trim())
-    if (zipCode) formData.set("zip_code", zipCode)
+    formData.set("address", selectedAddressRef.current || address.trim())
+    const zip = selectedZipRef.current || zipCode
+    if (zip) formData.set("zip_code", zip)
     formData.set("project_type", projectType)
     if (description.trim()) {
       formData.set("description", description.trim())
@@ -180,8 +193,10 @@ export default function StartPage() {
     formData.set("fire_west_of_280", fireWestOf280)
     formData.set("fire_sprinklers_exist", fireSprinklersExist)
     formData.set("has_earthwork", hasEarthwork)
-    if (placeLat) formData.set("lat", placeLat)
-    if (placeLng) formData.set("lng", placeLng)
+    const lat = selectedLatRef.current || placeLat
+    const lng = selectedLngRef.current || placeLng
+    if (lat) formData.set("lat", lat)
+    if (lng) formData.set("lng", lng)
 
     startTransition(async () => {
       const result = await createHomeownerProject(formData)
