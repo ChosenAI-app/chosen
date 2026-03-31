@@ -27,109 +27,125 @@ export default function ProjectExploreMap({
   const viewerRef = useRef<any>(null)
 
   useEffect(() => {
-    if (!containerRef.current) return
+    let retries = 0
+    const MAX_RETRIES = 20
+    let timeout: NodeJS.Timeout | null = null
 
-    // Wait for CesiumJS to load from CDN
-    if (!window.Cesium) {
-      const checkInterval = setInterval(() => {
-        if (window.Cesium) {
-          clearInterval(checkInterval)
-          initViewer()
+    function tryInit() {
+      if (typeof window === "undefined" || !window.Cesium) {
+        retries++
+        if (retries < MAX_RETRIES) {
+          timeout = setTimeout(tryInit, 500)
+        } else {
+          console.error("[CesiumJS] Failed to load after retries")
         }
-      }, 200)
-      return () => clearInterval(checkInterval)
+        return
+      }
+      initCesium()
     }
 
-    initViewer()
-
-    function initViewer() {
+    function initCesium() {
       if (!containerRef.current || viewerRef.current) return
 
-      const Cesium = window.Cesium
+      try {
+        const Cesium = window.Cesium
+        Cesium.RequestScheduler.requestsByServer["tile.googleapis.com:443"] = 18
 
-      // Enable simultaneous tile requests
-      Cesium.RequestScheduler.requestsByServer["tile.googleapis.com:443"] = 18
-
-      const viewer = new Cesium.Viewer(containerRef.current, {
-        imageryProvider: false,
-        baseLayerPicker: false,
-        geocoder: false,
-        globe: false,
-        homeButton: false,
-        sceneModePicker: false,
-        navigationHelpButton: false,
-        animation: false,
-        timeline: false,
-        fullscreenButton: false,
-        requestRenderMode: true,
-        infoBox: false,
-        selectionIndicator: false,
-      })
-
-      viewerRef.current = viewer
-
-      // Add Google Photorealistic 3D Tiles
-      Cesium.createGooglePhotorealistic3DTileset({ key: apiKey })
-        .then((tileset: unknown) => viewer.scene.primitives.add(tileset))
-        .catch((err: unknown) =>
-          console.error("[CesiumJS] 3D Tiles error:", err)
-        )
-
-      // Fly-in animation — two stages
-      viewer.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(lng, lat, 400),
-        orientation: {
-          heading: 0.0,
-          pitch: Cesium.Math.toRadians(-30),
-          roll: 0.0,
-        },
-        duration: 2.5,
-      })
-
-      setTimeout(() => {
-        viewer.camera.flyTo({
-          destination: Cesium.Cartesian3.fromDegrees(lng, lat, 150),
-          orientation: {
-            heading: 0.0,
-            pitch: Cesium.Math.toRadians(-60),
-            roll: 0.0,
-          },
-          duration: 2.0,
+        const viewer = new Cesium.Viewer(containerRef.current, {
+          imageryProvider: false,
+          baseLayerPicker: false,
+          geocoder: false,
+          globe: false,
+          homeButton: false,
+          sceneModePicker: false,
+          navigationHelpButton: false,
+          animation: false,
+          timeline: false,
+          fullscreenButton: false,
+          requestRenderMode: true,
+          infoBox: false,
+          selectionIndicator: false,
         })
-      }, 2500)
 
-      // Draw amber parcel polygon if parcelGeometry exists
-      if (parcelGeometry) {
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const geo = parcelGeometry as any
-          if (geo.type === "Polygon" && geo.coordinates?.[0]) {
-            const flatCoords: number[] = []
-            for (const point of geo.coordinates[0]) {
-              flatCoords.push(point[0], point[1])
-            }
-            viewer.entities.add({
-              polygon: {
-                hierarchy: Cesium.Cartesian3.fromDegreesArray(flatCoords),
-                material: new Cesium.ColorMaterialProperty(
-                  Cesium.Color.fromCssColorString("#F59E0B").withAlpha(0.25)
-                ),
-                outline: true,
-                outlineColor: Cesium.Color.fromCssColorString("#F59E0B"),
-                outlineWidth: 3,
-                height: 1,
+        viewerRef.current = viewer
+
+        Cesium.createGooglePhotorealistic3DTileset({ key: apiKey })
+          .then((tileset: unknown) => {
+            viewer.scene.primitives.add(tileset)
+
+            // Stage 1 fly-in
+            viewer.camera.flyTo({
+              destination: Cesium.Cartesian3.fromDegrees(lng, lat, 400),
+              orientation: {
+                heading: 0.0,
+                pitch: Cesium.Math.toRadians(-30),
+                roll: 0.0,
+              },
+              duration: 2.5,
+              complete: () => {
+                // Stage 2 fly-in
+                viewer.camera.flyTo({
+                  destination: Cesium.Cartesian3.fromDegrees(lng, lat, 150),
+                  orientation: {
+                    heading: 0.0,
+                    pitch: Cesium.Math.toRadians(-60),
+                    roll: 0.0,
+                  },
+                  duration: 2.0,
+                })
               },
             })
-          }
-        } catch (err) {
-          console.error("[CesiumJS] Parcel polygon error:", err)
-        }
+
+            // Draw parcel polygon if available
+            if (parcelGeometry) {
+              try {
+                const geom = parcelGeometry as {
+                  type: string
+                  coordinates: number[][][]
+                }
+                if (geom.type === "Polygon" && geom.coordinates?.[0]) {
+                  const flatCoords = geom.coordinates[0].flatMap(
+                    ([pLng, pLat]: number[]) => [pLng, pLat]
+                  )
+                  viewer.entities.add({
+                    polygon: {
+                      hierarchy: Cesium.Cartesian3.fromDegreesArray(flatCoords),
+                      material: new Cesium.ColorMaterialProperty(
+                        Cesium.Color.fromCssColorString("#F59E0B").withAlpha(
+                          0.25
+                        )
+                      ),
+                      outline: true,
+                      outlineColor:
+                        Cesium.Color.fromCssColorString("#F59E0B"),
+                      outlineWidth: 3,
+                      height: 1,
+                    },
+                  })
+                }
+              } catch (e) {
+                console.error("[CesiumJS] Parcel polygon error:", e)
+              }
+            }
+          })
+          .catch((err: unknown) =>
+            console.error("[CesiumJS] 3D Tiles failed:", err)
+          )
+      } catch (err) {
+        console.error("[CesiumJS] Viewer init failed:", err)
       }
     }
 
+    tryInit()
+
     return () => {
+      if (timeout) clearTimeout(timeout)
       if (viewerRef.current) {
-        viewerRef.current.destroy()
+        try {
+          viewerRef.current.destroy()
+        } catch {
+          // ignore destroy errors
+        }
         viewerRef.current = null
       }
     }

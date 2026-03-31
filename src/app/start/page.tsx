@@ -59,8 +59,12 @@ export default function StartPage() {
 
   // Google Places Autocomplete setup
   useEffect(() => {
-    function initAutocomplete() {
-      if (!addressInputRef.current || !window.google?.maps?.places) return
+    let interval: NodeJS.Timeout | null = null
+    let attempts = 0
+    const MAX_ATTEMPTS = 100 // 10 seconds at 100ms
+
+    function initAutocomplete(): boolean {
+      if (!addressInputRef.current || !window.google?.maps?.places) return false
 
       const autocomplete = new window.google.maps.places.Autocomplete(
         addressInputRef.current,
@@ -75,18 +79,18 @@ export default function StartPage() {
         const place = autocomplete.getPlace()
         if (!place.geometry?.location) return
 
-        // Set address
         if (place.formatted_address) {
           setAddress(place.formatted_address)
+          if (addressInputRef.current) {
+            addressInputRef.current.value = place.formatted_address
+          }
         }
 
-        // Set lat/lng
         const lat = place.geometry.location.lat()
         const lng = place.geometry.location.lng()
         setPlaceLat(lat.toString())
         setPlaceLng(lng.toString())
 
-        // Extract postal code
         if (place.address_components) {
           for (const component of place.address_components) {
             if (component.types?.includes("postal_code")) {
@@ -96,19 +100,20 @@ export default function StartPage() {
           }
         }
       })
+      return true
     }
 
-    // Poll for Google Maps to load
-    if (window.google?.maps?.places) {
-      initAutocomplete()
-    } else {
-      const interval = setInterval(() => {
-        if (window.google?.maps?.places) {
-          clearInterval(interval)
-          initAutocomplete()
-        }
-      }, 200)
-      return () => clearInterval(interval)
+    if (initAutocomplete()) return
+
+    interval = setInterval(() => {
+      attempts++
+      if (initAutocomplete() || attempts >= MAX_ATTEMPTS) {
+        if (interval) clearInterval(interval)
+      }
+    }, 100)
+
+    return () => {
+      if (interval) clearInterval(interval)
     }
   }, [])
 

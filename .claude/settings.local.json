@@ -1,6 +1,19 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(node:*)",
+      "Bash(grep -B 2 -A 15 sendMessage.*: /Users/shawnakshivakumar/Desktop/chosen/node_modules/@ai-sdk/react/dist/index.d.ts)",
+      "Bash(grep -B 5 -A 10 api.*: /Users/shawnakshivakumar/Desktop/chosen/node_modules/ai/dist/index.d.ts)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "shadcn"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }

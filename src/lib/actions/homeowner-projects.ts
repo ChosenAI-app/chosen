@@ -171,6 +171,22 @@ export async function createHomeownerProject(formData: FormData): Promise<{
     return { data: null, error: "Failed to create project." }
   }
 
+  // Verify the row is readable before redirecting (prevents 404 race condition)
+  let verified = false
+  for (let i = 0; i < 3; i++) {
+    const { data: check } = await supabase
+      .from("homeowner_projects")
+      .select("id")
+      .eq("id", projectId)
+      .maybeSingle()
+    if (check?.id) {
+      verified = true
+      break
+    }
+    await new Promise((r) => setTimeout(r, 200))
+  }
+  if (!verified) return { data: null, error: "Failed to create project." }
+
   generateAIScope(projectId).catch(console.error)
 
   redirect(`/homeowner/projects/${projectId}/explore`)
