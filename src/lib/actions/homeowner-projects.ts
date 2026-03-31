@@ -124,6 +124,8 @@ export async function createHomeownerProject(formData: FormData): Promise<{
     if (isNaN(mapLng)) mapLng = null
   }
 
+  console.log("[coords] mapLat:", mapLat, "mapLng:", mapLng, "from places lat:", formLat, "lng:", formLng)
+
   // Insert homeowner project
   let projectId: string
 

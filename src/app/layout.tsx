@@ -28,19 +28,8 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <head>
-        <link
-          rel="stylesheet"
-          href="https://ajax.googleapis.com/ajax/libs/cesiumjs/1.124/Build/Cesium/Widgets/widgets.css"
-        />
-      </head>
       <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>
         {children}
-        {/* CesiumJS from CDN — NOT npm (avoids 50MB bundle) */}
-        <Script
-          src="https://ajax.googleapis.com/ajax/libs/cesiumjs/1.124/Build/Cesium/Cesium.js"
-          strategy="lazyOnload"
-        />
         {/* Google Maps for Places Autocomplete */}
         <Script
           src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&v=beta&loading=async`}

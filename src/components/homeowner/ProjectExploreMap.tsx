@@ -9,7 +9,7 @@ declare global {
   }
 }
 
-interface ProjectExploreMapProps {
+interface Props {
   lat: number
   lng: number
   parcelGeometry: unknown | null
@@ -21,35 +21,76 @@ export default function ProjectExploreMap({
   lng,
   parcelGeometry,
   apiKey,
-}: ProjectExploreMapProps) {
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const viewerRef = useRef<any>(null)
 
   useEffect(() => {
-    let retries = 0
-    const MAX_RETRIES = 60 // 30 seconds at 500ms
-    let timeout: NodeJS.Timeout | null = null
+    let destroyed = false
 
-    function tryInit() {
-      if (typeof window === "undefined") return
-
-      if (!window.Cesium) {
-        retries++
-        if (retries < MAX_RETRIES) {
-          timeout = setTimeout(tryInit, 500)
-        } else {
-          console.error(
-            "[CesiumJS] Failed to load after 30 seconds — check CDN script in layout"
-          )
-        }
+    async function loadCesiumAndInit() {
+      // If Cesium already loaded (e.g. navigating back to page)
+      if (window.Cesium) {
+        initViewer()
         return
       }
-      initCesium()
+
+      // Inject CSS
+      if (!document.querySelector('link[href*="cesiumjs"]')) {
+        const link = document.createElement("link")
+        link.rel = "stylesheet"
+        link.href =
+          "https://ajax.googleapis.com/ajax/libs/cesiumjs/1.124/Build/Cesium/Widgets/widgets.css"
+        document.head.appendChild(link)
+      }
+
+      // Inject JS script tag
+      await new Promise<void>((resolve, reject) => {
+        if (window.Cesium) {
+          resolve()
+          return
+        }
+
+        const existing = document.querySelector('script[src*="cesiumjs"]')
+        if (existing) {
+          // Script tag exists but Cesium not ready yet — poll
+          let polls = 0
+          const poll = setInterval(() => {
+            polls++
+            if (window.Cesium) {
+              clearInterval(poll)
+              resolve()
+            }
+            if (polls > 60) {
+              clearInterval(poll)
+              reject(new Error("Cesium poll timeout"))
+            }
+          }, 500)
+          return
+        }
+
+        const script = document.createElement("script")
+        script.src =
+          "https://ajax.googleapis.com/ajax/libs/cesiumjs/1.124/Build/Cesium/Cesium.js"
+        script.async = true
+        script.onload = () => resolve()
+        script.onerror = () =>
+          reject(new Error("CesiumJS script failed to load"))
+        document.head.appendChild(script)
+      })
+
+      if (!destroyed) initViewer()
     }
 
-    function initCesium() {
-      if (!containerRef.current || viewerRef.current) return
+    function initViewer() {
+      if (
+        !containerRef.current ||
+        viewerRef.current ||
+        !window.Cesium ||
+        destroyed
+      )
+        return
 
       try {
         const Cesium = window.Cesium
@@ -75,6 +116,7 @@ export default function ProjectExploreMap({
 
         Cesium.createGooglePhotorealistic3DTileset({ key: apiKey })
           .then((tileset: unknown) => {
+            if (destroyed) return
             viewer.scene.primitives.add(tileset)
 
             // Stage 1 fly-in
@@ -87,6 +129,7 @@ export default function ProjectExploreMap({
               },
               duration: 2.5,
               complete: () => {
+                if (destroyed) return
                 // Stage 2 fly-in
                 viewer.camera.flyTo({
                   destination: Cesium.Cartesian3.fromDegrees(lng, lat, 150),
@@ -113,7 +156,8 @@ export default function ProjectExploreMap({
                   )
                   viewer.entities.add({
                     polygon: {
-                      hierarchy: Cesium.Cartesian3.fromDegreesArray(flatCoords),
+                      hierarchy:
+                        Cesium.Cartesian3.fromDegreesArray(flatCoords),
                       material: new Cesium.ColorMaterialProperty(
                         Cesium.Color.fromCssColorString("#F59E0B").withAlpha(
                           0.25
@@ -140,10 +184,12 @@ export default function ProjectExploreMap({
       }
     }
 
-    tryInit()
+    loadCesiumAndInit().catch((err) =>
+      console.error("[CesiumJS] Load error:", err)
+    )
 
     return () => {
-      if (timeout) clearTimeout(timeout)
+      destroyed = true
       if (viewerRef.current) {
         try {
           viewerRef.current.destroy()
