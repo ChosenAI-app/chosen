@@ -23,6 +23,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getUserRole, canUploadDocuments, canDeleteDocuments } from "@/lib/utils/permissions";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 const ALLOWED_TYPES = [
@@ -79,15 +80,10 @@ export async function getUploadUrl(params: {
     return { signedUrl: "", token: "", path: "", error: "Not authenticated." };
   }
 
-  // d. Verify project ownership
-  const { data: project } = await supabase
-    .from("projects")
-    .select("user_id")
-    .eq("id", projectId)
-    .single();
-
-  if (!project || project.user_id !== user.id) {
-    return { signedUrl: "", token: "", path: "", error: "Project not found." };
+  // d. Verify role-based access
+  const role = await getUserRole(user.id, projectId, supabase);
+  if (!role || !canUploadDocuments(role)) {
+    return { signedUrl: "", token: "", path: "", error: "Not authorized to upload documents." };
   }
 
   // e. Sanitize file name
@@ -137,15 +133,10 @@ export async function recordUpload(params: {
     return { error: "Not authenticated." };
   }
 
-  // b. Verify project ownership
-  const { data: project } = await supabase
-    .from("projects")
-    .select("user_id")
-    .eq("id", projectId)
-    .single();
-
-  if (!project || project.user_id !== user.id) {
-    return { error: "Project not found." };
+  // b. Verify role-based access
+  const role = await getUserRole(user.id, projectId, supabase);
+  if (!role || !canUploadDocuments(role)) {
+    return { error: "Not authorized to upload documents." };
   }
 
   // c. Build public URL
@@ -201,15 +192,10 @@ export async function deleteDocument(
     return { error: "Document not found." };
   }
 
-  // c. Verify project ownership
-  const { data: project } = await supabase
-    .from("projects")
-    .select("user_id")
-    .eq("id", doc.project_id)
-    .single();
-
-  if (!project || project.user_id !== user.id) {
-    return { error: "Project not found." };
+  // c. Verify role-based access
+  const role = await getUserRole(user.id, doc.project_id, supabase);
+  if (!role || !canDeleteDocuments(role)) {
+    return { error: "Not authorized to delete documents." };
   }
 
   // d. Extract storage path from file_url

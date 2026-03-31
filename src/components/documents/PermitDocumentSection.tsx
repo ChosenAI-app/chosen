@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { DocumentChecklistItem } from "@/components/documents/DocumentChecklistItem";
 import { Badge } from "@/components/ui/badge";
 import { getStatusVariant, getStatusLabel } from "@/lib/utils/status";
+import type { ProjectRole } from "@/lib/utils/permissions";
 import type { PermitRequirement, ProjectDocument } from "@/lib/types";
 
 interface PermitDocumentSectionProps {
@@ -9,6 +10,7 @@ interface PermitDocumentSectionProps {
   permitTypeId: string;
   permitTypeName: string;
   permitStatus: string;
+  userRole: ProjectRole;
 }
 
 export async function PermitDocumentSection({
@@ -16,6 +18,7 @@ export async function PermitDocumentSection({
   permitTypeId,
   permitTypeName,
   permitStatus,
+  userRole,
 }: PermitDocumentSectionProps) {
   const supabase = await createClient();
 
@@ -63,6 +66,7 @@ export async function PermitDocumentSection({
             projectId={projectId}
             requirement={req}
             uploadedDoc={docsByRequirement.get(req.id) ?? null}
+            userRole={userRole}
           />
         ))}
       </div>

@@ -1,13 +1,20 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PermitStatusSelect } from "@/components/permits/PermitStatusSelect";
 import { DeleteProjectButton } from "@/components/permits/DeleteProjectButton";
 import { InviteTeamMemberForm } from "@/components/team/InviteTeamMemberForm";
 import { TeamMemberList } from "@/components/team/TeamMemberList";
-import type { Project } from "@/lib/types";
+import {
+  getUserRole,
+  canManageTeam,
+  canDeleteProject,
+  canUpdatePermitStatus,
+  canViewTeam,
+} from "@/lib/utils/permissions";
+import { getStatusVariant, getStatusLabel } from "@/lib/utils/status";
 
 const PROJECT_TYPE_LABELS: Record<string, string> = {
   adu_detached: "Detached ADU",
@@ -29,20 +36,28 @@ export default async function ProjectDetailPage({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    notFound();
+    redirect("/login");
   }
 
   const { data: project } = await supabase
     .from("projects")
     .select("*, jurisdictions(name)")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   if (!project) {
     notFound();
   }
 
-  const isOwner = (project as unknown as Project).user_id === user.id;
+  const role = await getUserRole(user.id, id, supabase);
+  if (!role) {
+    notFound();
+  }
+
+  const userCanManageTeam = canManageTeam(role);
+  const userCanDelete = canDeleteProject(role);
+  const userCanUpdateStatus = canUpdatePermitStatus(role);
+  const userCanViewTeam = canViewTeam(role);
 
   const { data: permits } = await supabase
     .from("project_permits")
@@ -98,11 +113,17 @@ export default async function ProjectDetailPage({
                       </p>
                     )}
                   </div>
-                  <PermitStatusSelect
-                    projectPermitId={permit.id}
-                    projectId={id}
-                    currentStatus={permit.status}
-                  />
+                  {userCanUpdateStatus ? (
+                    <PermitStatusSelect
+                      projectPermitId={permit.id}
+                      projectId={id}
+                      currentStatus={permit.status}
+                    />
+                  ) : (
+                    <Badge variant={getStatusVariant(permit.status)}>
+                      {getStatusLabel(permit.status)}
+                    </Badge>
+                  )}
                 </div>
               );
             })}
@@ -130,13 +151,19 @@ export default async function ProjectDetailPage({
         </Button>
       </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-medium">Team</h2>
-        {isOwner && <InviteTeamMemberForm projectId={id} />}
-        <TeamMemberList projectId={id} currentUserId={user.id} />
-      </section>
+      {userCanViewTeam && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-medium">Team</h2>
+          {userCanManageTeam && <InviteTeamMemberForm projectId={id} />}
+          <TeamMemberList
+            projectId={id}
+            currentUserId={user.id}
+            canManage={userCanManageTeam}
+          />
+        </section>
+      )}
 
-      {isOwner && (
+      {userCanDelete && (
         <div className="mt-8 border-t pt-6">
           <DeleteProjectButton projectId={id} />
         </div>

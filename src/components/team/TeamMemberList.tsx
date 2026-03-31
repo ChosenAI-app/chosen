@@ -1,22 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { RemoveTeamMemberButton } from "@/components/team/RemoveTeamMemberButton";
+import { ROLE_LABELS, type ProjectRole } from "@/lib/utils/permissions";
 import type { TeamMember } from "@/lib/types";
-
-const ROLE_LABELS: Record<string, string> = {
-  contractor: "Contractor",
-  architect: "Architect",
-  client: "Client",
-};
 
 interface TeamMemberListProps {
   projectId: string;
   currentUserId: string;
+  canManage: boolean;
 }
 
 export async function TeamMemberList({
   projectId,
   currentUserId,
+  canManage,
 }: TeamMemberListProps) {
   const supabase = await createClient();
 
@@ -45,7 +42,7 @@ export async function TeamMemberList({
             <p className="text-sm font-medium">{member.invited_email}</p>
             <div className="flex items-center gap-2">
               <Badge variant="secondary">
-                {ROLE_LABELS[member.role] ?? member.role}
+                {ROLE_LABELS[member.role as ProjectRole] ?? member.role}
               </Badge>
               <span
                 className={`inline-flex h-5 items-center rounded-4xl px-2 text-xs font-medium ${
@@ -58,13 +55,12 @@ export async function TeamMemberList({
               </span>
             </div>
           </div>
-          {member.user_id !== currentUserId &&
-            member.role !== "contractor" && (
-              <RemoveTeamMemberButton
-                memberId={member.id}
-                projectId={projectId}
-              />
-            )}
+          {canManage && member.user_id !== currentUserId && (
+            <RemoveTeamMemberButton
+              memberId={member.id}
+              projectId={projectId}
+            />
+          )}
         </div>
       ))}
     </div>

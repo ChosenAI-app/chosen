@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
-import type { Project, InspectionStep } from "@/lib/types";
+import { getUserRole, canViewInspections } from "@/lib/utils/permissions";
+import type { InspectionStep } from "@/lib/types";
 
 export default async function InspectionsPage({
   params,
@@ -20,14 +21,20 @@ export default async function InspectionsPage({
     notFound();
   }
 
+  // Role-based access check
+  const role = await getUserRole(user.id, id, supabase);
+  if (!role || !canViewInspections(role)) {
+    notFound();
+  }
+
   // Fetch project
   const { data: project } = await supabase
     .from("projects")
-    .select("*")
+    .select("address")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
-  if (!project || (project as unknown as Project).user_id !== user.id) {
+  if (!project) {
     notFound();
   }
 

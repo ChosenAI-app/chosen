@@ -27,8 +27,15 @@ export async function inviteTeamMember(
     return { error: "All fields are required." };
   }
 
-  if (role !== "architect" && role !== "client") {
-    return { error: "Role must be architect or client." };
+  const VALID_INVITABLE_ROLES = [
+    "co_owner",
+    "architect",
+    "engineer",
+    "inspector",
+    "client",
+  ];
+  if (!VALID_INVITABLE_ROLES.includes(role)) {
+    return { error: "Invalid role." };
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

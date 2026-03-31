@@ -7,6 +7,11 @@ import { deleteDocument } from "@/lib/actions/documents";
 import { FileUploadButton } from "@/components/documents/FileUploadButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  canUploadDocuments,
+  canDeleteDocuments,
+  type ProjectRole,
+} from "@/lib/utils/permissions";
 import type { PermitRequirement, ProjectDocument } from "@/lib/types";
 
 const DOC_STATUS_VARIANT: Record<
@@ -22,12 +27,14 @@ interface DocumentChecklistItemProps {
   projectId: string;
   requirement: PermitRequirement;
   uploadedDoc: ProjectDocument | null;
+  userRole: ProjectRole;
 }
 
 export function DocumentChecklistItem({
   projectId,
   requirement,
   uploadedDoc,
+  userRole,
 }: DocumentChecklistItemProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -64,11 +71,13 @@ export function DocumentChecklistItem({
 
       <div className="flex shrink-0 flex-col items-end gap-1">
         {uploadedDoc === null ? (
-          <FileUploadButton
-            projectId={projectId}
-            permitRequirementId={requirement.id}
-            onSuccess={() => router.refresh()}
-          />
+          canUploadDocuments(userRole) ? (
+            <FileUploadButton
+              projectId={projectId}
+              permitRequirementId={requirement.id}
+              onSuccess={() => router.refresh()}
+            />
+          ) : null
         ) : (
           <div className="flex flex-col items-end gap-1.5">
             <div className="flex items-center gap-2">
@@ -85,16 +94,20 @@ export function DocumentChecklistItem({
                 {uploadedDoc.status}
               </Badge>
             </div>
-            <Button
-              variant="destructive"
-              size="sm"
-              disabled={isDeleting}
-              onClick={handleDelete}
-            >
-              {isDeleting ? "Removing..." : "Remove"}
-            </Button>
-            {deleteError && (
-              <p className="text-xs text-destructive">{deleteError}</p>
+            {canDeleteDocuments(userRole) && (
+              <>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={isDeleting}
+                  onClick={handleDelete}
+                >
+                  {isDeleting ? "Removing..." : "Remove"}
+                </Button>
+                {deleteError && (
+                  <p className="text-xs text-destructive">{deleteError}</p>
+                )}
+              </>
             )}
           </div>
         )}

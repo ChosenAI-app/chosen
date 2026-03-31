@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { PermitDocumentSection } from "@/components/documents/PermitDocumentSection";
-import type { Project } from "@/lib/types";
+import { getUserRole, canViewDocuments } from "@/lib/utils/permissions";
 
 export default async function DocumentsPage({
   params,
@@ -11,7 +11,6 @@ export default async function DocumentsPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  // Auth check
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -20,18 +19,21 @@ export default async function DocumentsPage({
     notFound();
   }
 
-  // Fetch project
-  const { data: project } = await supabase
-    .from("projects")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if (!project || (project as unknown as Project).user_id !== user.id) {
+  const role = await getUserRole(user.id, id, supabase);
+  if (!role || !canViewDocuments(role)) {
     notFound();
   }
 
-  // Fetch permits with permit type info
+  const { data: project } = await supabase
+    .from("projects")
+    .select("address")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!project) {
+    notFound();
+  }
+
   const { data: permits } = await supabase
     .from("project_permits")
     .select("*, permit_types!inner(id, name)")
@@ -58,6 +60,7 @@ export default async function DocumentsPage({
               permitTypeId={permitType.id}
               permitTypeName={permitType.name}
               permitStatus={permit.status}
+              userRole={role}
             />
           );
         })

@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getUserRole, canUpdatePermitStatus } from "@/lib/utils/permissions";
 
 const VALID_STATUSES = [
   "not_started",
@@ -32,25 +33,20 @@ export async function updatePermitStatus(
     return { error: "Not authenticated." };
   }
 
-  // c. Verify ownership
+  // c. Verify permit exists and user has permission
   const { data: permit } = await supabase
     .from("project_permits")
     .select("project_id")
     .eq("id", projectPermitId)
-    .single();
+    .maybeSingle();
 
   if (!permit) {
     return { error: "Permit not found." };
   }
 
-  const { data: project } = await supabase
-    .from("projects")
-    .select("user_id")
-    .eq("id", permit.project_id)
-    .single();
-
-  if (!project || project.user_id !== user.id) {
-    return { error: "Not authorized." };
+  const role = await getUserRole(user.id, permit.project_id, supabase);
+  if (!role || !canUpdatePermitStatus(role)) {
+    return { error: "Not authorized to update permit status." };
   }
 
   // d. Update status

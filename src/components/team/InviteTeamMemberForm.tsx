@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { inviteTeamMember } from "@/lib/actions/team";
+import { INVITABLE_ROLES, ROLE_LABELS } from "@/lib/utils/permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +20,7 @@ interface InviteTeamMemberFormProps {
 
 export function InviteTeamMemberForm({ projectId }: InviteTeamMemberFormProps) {
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"architect" | "client">("architect");
+  const [role, setRole] = useState<string>("architect");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -59,13 +60,16 @@ export function InviteTeamMemberForm({ projectId }: InviteTeamMemberFormProps) {
         </div>
         <div className="flex flex-col gap-1.5">
           <Label>Role</Label>
-          <Select value={role} onValueChange={(v) => setRole(v as "architect" | "client")}>
-            <SelectTrigger className="w-36">
+          <Select value={role} onValueChange={setRole}>
+            <SelectTrigger className="w-52">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="architect">Architect</SelectItem>
-              <SelectItem value="client">Client</SelectItem>
+              {INVITABLE_ROLES.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {ROLE_LABELS[r]}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
