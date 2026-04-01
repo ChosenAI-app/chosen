@@ -34,6 +34,11 @@ export async function createHomeownerProject(formData: FormData): Promise<{
   const formLat = formData.get("lat") as string | null
   const formLng = formData.get("lng") as string | null
 
+  const separatelyMetered = formData.get("separately_metered") === "yes"
+  const aduSqft = formData.get("adu_sqft")
+    ? parseInt(formData.get("adu_sqft") as string)
+    : 800
+
   const fireSprinklersExist = formData.get("fire_sprinklers_exist") === "yes"
   const hasEarthwork = formData.get("has_earthwork") === "yes"
 
@@ -121,6 +126,7 @@ export async function createHomeownerProject(formData: FormData): Promise<{
         fire_west_of_280: fireWestOf280,
         fire_sprinklers_exist: fireSprinklersExist,
         has_earthwork: hasEarthwork,
+        separately_metered: separatelyMetered,
         regrid_parcel_id: regridParcelId,
         lot_size_sqft: lotSizeSqft,
         existing_sqft: existingSqft,
@@ -219,7 +225,7 @@ export async function generateAIScope(projectId: string): Promise<void> {
         adu_max_sqft: z.number().optional(),
       }),
       system: PALO_ALTO_SCOPE_SYSTEM_PROMPT,
-      prompt: `Address: ${project.address}. Type: ${project.project_type}. Lot: ${project.lot_size_sqft ?? "unknown"} SF. Zoning: ${project.zoning ?? "unknown"}. Year built: ${project.year_built ?? "unknown"}. West of 280: ${project.fire_west_of_280}. Sprinklers: ${project.fire_sprinklers_exist}. Earthwork: ${project.has_earthwork}.`,
+      prompt: `Address: ${project.address}. Type: ${project.project_type}. Lot: ${project.lot_size_sqft ?? "unknown"} SF. Zoning: ${project.zoning ?? "unknown"}. Year built: ${project.year_built ?? "unknown"}. West of 280: ${project.fire_west_of_280}. Sprinklers: ${project.fire_sprinklers_exist}. Earthwork: ${project.has_earthwork}. Separately metered ADU: ${project.separately_metered ? "Yes — dual meter panel required" : "No — shared meter"}.`,
     })
 
     console.log("[generateAIScope] AI response received:", {

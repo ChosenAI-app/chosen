@@ -3,6 +3,7 @@
 import { useState, useTransition, useEffect, useRef } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -46,11 +47,17 @@ export default function StartPage() {
   const [placeLat, setPlaceLat] = useState("")
   const [placeLng, setPlaceLng] = useState("")
 
+  // Step 1 — ADU size
+  const [aduSqft, setAduSqft] = useState<number>(800)
+
   // Step 2 fields
   const [fireSprinklersExist, setFireSprinklersExist] = useState<
     "yes" | "no" | ""
   >("")
   const [hasEarthwork, setHasEarthwork] = useState<"yes" | "no" | "">("")
+  const [separatelyMetered, setSeparatelyMetered] = useState<
+    "yes" | "no" | ""
+  >("")
 
   // Refs for synchronous access (state setters are async)
   const selectedAddressRef = useRef("")
@@ -197,7 +204,7 @@ export default function StartPage() {
   function handleSubmit() {
     setError(null)
 
-    if (!fireSprinklersExist || !hasEarthwork) {
+    if (!fireSprinklersExist || !hasEarthwork || !separatelyMetered) {
       setError("Please answer all questions.")
       return
     }
@@ -212,6 +219,8 @@ export default function StartPage() {
     }
     formData.set("fire_sprinklers_exist", fireSprinklersExist)
     formData.set("has_earthwork", hasEarthwork)
+    formData.set("separately_metered", separatelyMetered)
+    formData.set("adu_sqft", String(aduSqft))
     const lat = selectedLatRef.current || placeLat
     const lng = selectedLngRef.current || placeLng
     if (lat) formData.set("lat", lat)
@@ -292,6 +301,31 @@ export default function StartPage() {
                     </Select>
                   </div>
 
+                  {(projectType === "adu_detached" ||
+                    projectType === "adu_attached" ||
+                    projectType === "jadu") && (
+                    <div>
+                      <Label htmlFor="adu_sqft">Planned ADU size (SF)</Label>
+                      <Input
+                        id="adu_sqft"
+                        type="number"
+                        min={200}
+                        max={1200}
+                        step={50}
+                        value={aduSqft}
+                        onChange={(e) =>
+                          setAduSqft(parseInt(e.target.value) || 800)
+                        }
+                        placeholder="800"
+                        className="mt-1.5"
+                      />
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        State law guarantees at least 800 SF — Palo Alto allows
+                        up to 1,000 SF on qualifying lots.
+                      </p>
+                    </div>
+                  )}
+
                   <div>
                     <Label htmlFor="description">
                       Scope description{" "}
@@ -329,7 +363,7 @@ export default function StartPage() {
             {step === 2 && (
               <>
                 <h1 className="text-xl font-bold tracking-tight">
-                  Two quick questions
+                  A few quick questions
                 </h1>
                 <p className="mt-1 text-sm text-muted-foreground">
                   These help us identify which permits your project requires.
@@ -361,6 +395,38 @@ export default function StartPage() {
                         }
                         size="sm"
                         onClick={() => setFireSprinklersExist("no")}
+                      >
+                        No
+                      </Button>
+                    </div>
+                  </fieldset>
+
+                  <fieldset>
+                    <legend className="text-sm font-medium text-foreground">
+                      Will the ADU have its own separate utility meter?
+                    </legend>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      A separately-metered ADU requires a dual-meter panel
+                      upgrade — adds ~$3,000–$8,000 to project cost.
+                    </p>
+                    <div className="mt-2 flex gap-3">
+                      <Button
+                        type="button"
+                        variant={
+                          separatelyMetered === "yes" ? "default" : "outline"
+                        }
+                        size="sm"
+                        onClick={() => setSeparatelyMetered("yes")}
+                      >
+                        Yes
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={
+                          separatelyMetered === "no" ? "default" : "outline"
+                        }
+                        size="sm"
+                        onClick={() => setSeparatelyMetered("no")}
                       >
                         No
                       </Button>
