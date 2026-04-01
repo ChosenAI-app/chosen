@@ -55,8 +55,8 @@ export function canViewDocuments(_role: ProjectRole): boolean {
   return true;
 }
 
-export function canViewTeam(role: ProjectRole): boolean {
-  return ["contractor", "co_owner", "architect", "engineer"].includes(role);
+export function canViewTeam(_role: ProjectRole): boolean {
+  return true; // everyone on the team can see who's on the team
 }
 
 export async function getUserRole(

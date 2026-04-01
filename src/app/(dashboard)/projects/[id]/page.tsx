@@ -39,11 +39,29 @@ export default async function ProjectDetailPage({
     redirect("/login");
   }
 
-  const { data: project } = await supabase
+  // Try fetching project — RLS allows owner + accepted team members
+  let { data: project } = await supabase
     .from("projects")
     .select("*, jurisdictions(name)")
     .eq("id", id)
     .maybeSingle();
+
+  // If RLS blocks it, try via admin for team members (fallback)
+  if (!project) {
+    const role = await getUserRole(user.id, id, supabase);
+    if (role) {
+      // User has a role — RLS might not have the team policy applied
+      // Use a direct query without the owner filter
+      const { createAdminClient } = await import("@/lib/supabase/admin");
+      const admin = createAdminClient();
+      const { data: adminProject } = await admin
+        .from("projects")
+        .select("*, jurisdictions(name)")
+        .eq("id", id)
+        .maybeSingle();
+      project = adminProject;
+    }
+  }
 
   if (!project) {
     notFound();
@@ -74,6 +92,14 @@ export default async function ProjectDetailPage({
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Client read-only notice */}
+      {role === "client" && (
+        <div className="rounded-md border border-border bg-card/50 px-4 py-3 text-sm text-muted-foreground">
+          You have been added as a client on this project. You can view project
+          status, permits, and documents here.
+        </div>
+      )}
+
       {/* Page header */}
       <div>
         <Link

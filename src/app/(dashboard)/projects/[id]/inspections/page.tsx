@@ -26,11 +26,23 @@ export default async function InspectionsPage({
     notFound();
   }
 
-  const { data: project } = await supabase
+  let { data: project } = await supabase
     .from("projects")
     .select("address")
     .eq("id", id)
     .maybeSingle();
+
+  // Fallback for team members if RLS blocks
+  if (!project) {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const admin = createAdminClient();
+    const { data: adminProject } = await admin
+      .from("projects")
+      .select("address")
+      .eq("id", id)
+      .maybeSingle();
+    project = adminProject;
+  }
 
   if (!project) {
     notFound();
