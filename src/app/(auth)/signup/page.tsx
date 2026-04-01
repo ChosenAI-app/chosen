@@ -54,7 +54,12 @@ export default function SignupPage() {
           : profession || "contractor"
     }
 
-    console.log("[signup] submitting with user_type:", userType, "role:", role)
+    console.log("[signup page] calling signUp with:", {
+      userType,
+      role,
+      profession,
+      email,
+    })
 
     startTransition(async () => {
       const result = await signUp(

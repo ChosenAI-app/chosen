@@ -56,28 +56,52 @@ export async function signUp(
 ): Promise<{ error: string | null }> {
   const supabase = await createClient()
 
-  console.log("[auth] signUp called with user_type:", userType)
+  console.log("[signUp] received params:", { fullName, userType })
+  console.log("[signUp] calling supabase.auth.signUp with metadata:", {
+    full_name: fullName,
+    user_type: userType,
+  })
 
   let errorMessage: string | null = null
 
   try {
-    const { data: signUpData, error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { full_name: fullName, user_type: userType },
       },
     })
+
+    console.log("[signUp] result:", {
+      userId: data?.user?.id,
+      error: error?.message,
+    })
+    console.log("[signUp] user metadata stored:", data?.user?.user_metadata)
+
     if (error) {
       errorMessage = error.message
-    } else if (signUpData.user) {
-      // Safety net: explicitly set user_type in profiles
-      // (trigger sometimes misses on fast signups)
-      await supabase
+    } else if (data?.user) {
+      // Wait for trigger to create profile row, then force-update user_type
+      await new Promise((r) => setTimeout(r, 500))
+
+      // Use admin client to guarantee the update (bypasses RLS)
+      const admin = createAdminClient()
+      const { error: profileError } = await admin
         .from("profiles")
-        .update({ user_type: userType, full_name: fullName })
-        .eq("id", signUpData.user.id)
-      console.log("[auth] profile updated with user_type:", userType)
+        .upsert(
+          {
+            id: data.user.id,
+            full_name: fullName,
+            user_type: userType,
+          },
+          { onConflict: "id" }
+        )
+
+      console.log(
+        "[signUp] profile upsert result:",
+        profileError?.message ?? "success"
+      )
     }
   } catch {
     errorMessage = "An unexpected error occurred."
