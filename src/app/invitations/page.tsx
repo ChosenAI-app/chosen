@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { redirect } from "next/navigation"
 import { GlobalNav } from "@/components/shared/GlobalNav"
 import { InvitationActions } from "@/components/invitations/InvitationActions"
@@ -41,7 +42,8 @@ export default async function InvitationsPage() {
     .eq("invited_email", user.email!)
     .order("invited_at", { ascending: false })
 
-  // Fetch project details for each invitation
+  // Fetch project details via admin (RLS blocks non-owners from reading projects)
+  const admin = createAdminClient()
   const projectIds = [
     ...new Set((invitations ?? []).map((i) => i.project_id)),
   ]
@@ -50,7 +52,7 @@ export default async function InvitationsPage() {
     { address: string; project_type: string; user_id: string }
   > = {}
   if (projectIds.length > 0) {
-    const { data: projects } = await supabase
+    const { data: projects } = await admin
       .from("projects")
       .select("id, address, project_type, user_id")
       .in("id", projectIds)
@@ -67,7 +69,7 @@ export default async function InvitationsPage() {
   ]
   let inviterNames: Record<string, string> = {}
   if (inviterIds.length > 0) {
-    const { data: profiles } = await supabase
+    const { data: profiles } = await admin
       .from("profiles")
       .select("id, full_name")
       .in("id", inviterIds)

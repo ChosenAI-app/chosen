@@ -1,6 +1,6 @@
 "use client"
 
-import { useTransition } from "react"
+import { useTransition, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { CheckCircle, XCircle, Loader2 } from "lucide-react"
@@ -15,7 +15,16 @@ export function InvitationActions({
 }) {
   const [acceptPending, startAccept] = useTransition()
   const [declinePending, startDecline] = useTransition()
+  const [done, setDone] = useState<"accepted" | "declined" | null>(null)
   const router = useRouter()
+
+  if (done === "declined") {
+    return (
+      <p className="text-sm italic text-muted-foreground">
+        Invitation declined.
+      </p>
+    )
+  }
 
   function handleAccept() {
     startAccept(async () => {
@@ -30,8 +39,11 @@ export function InvitationActions({
 
   function handleDecline() {
     startDecline(async () => {
-      await declineInvitation(inviteId)
-      router.refresh()
+      const result = await declineInvitation(inviteId)
+      if (!result?.error) {
+        setDone("declined")
+        setTimeout(() => router.refresh(), 300)
+      }
     })
   }
 

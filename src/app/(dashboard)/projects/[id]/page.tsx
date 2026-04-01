@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { notFound, redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PermitStatusSelect } from "@/components/permits/PermitStatusSelect";
 import { DeleteProjectButton } from "@/components/permits/DeleteProjectButton";
@@ -39,27 +39,38 @@ export default async function ProjectDetailPage({
     redirect("/login");
   }
 
-  // Try fetching project — RLS allows owner + accepted team members
-  let { data: project } = await supabase
+  // Try as project owner first
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let project: any = null;
+
+  const { data: ownedProject } = await supabase
     .from("projects")
     .select("*, jurisdictions(name)")
     .eq("id", id)
+    .eq("user_id", user.id)
     .maybeSingle();
 
-  // If RLS blocks it, try via admin for team members (fallback)
-  if (!project) {
-    const role = await getUserRole(user.id, id, supabase);
-    if (role) {
-      // User has a role — RLS might not have the team policy applied
-      // Use a direct query without the owner filter
-      const { createAdminClient } = await import("@/lib/supabase/admin");
+  if (ownedProject) {
+    project = ownedProject;
+  } else {
+    // Check if user is an accepted team member
+    const { data: membership } = await supabase
+      .from("team_members")
+      .select("role, invite_status")
+      .eq("project_id", id)
+      .eq("user_id", user.id)
+      .eq("invite_status", "accepted")
+      .maybeSingle();
+
+    if (membership) {
+      // Fetch project via admin client (bypasses RLS)
       const admin = createAdminClient();
-      const { data: adminProject } = await admin
+      const { data: teamProject } = await admin
         .from("projects")
         .select("*, jurisdictions(name)")
         .eq("id", id)
         .maybeSingle();
-      project = adminProject;
+      project = teamProject;
     }
   }
 
