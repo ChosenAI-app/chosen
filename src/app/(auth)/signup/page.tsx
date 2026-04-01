@@ -45,13 +45,16 @@ export default function SignupPage() {
       return
     }
 
-    const professionEntry = PROFESSIONS.find((p) => p.value === profession)
-    const userType =
-      role === "homeowner"
-        ? "homeowner"
-        : ("userType" in (professionEntry ?? {})
-            ? (professionEntry as { userType: string }).userType
-            : profession) || "contractor"
+    let userType = "homeowner"
+    if (role === "contractor") {
+      const entry = PROFESSIONS.find((p) => p.value === profession)
+      userType =
+        entry && "userType" in entry
+          ? (entry as { userType: string }).userType
+          : profession || "contractor"
+    }
+
+    console.log("[signup] submitting with user_type:", userType, "role:", role)
 
     startTransition(async () => {
       const result = await signUp(

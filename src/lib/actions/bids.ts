@@ -12,6 +12,20 @@ export async function submitBid(
   } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
+  // Block homeowners from bidding
+  const { data: bidderProfile } = await supabase
+    .from("profiles")
+    .select("user_type")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (!bidderProfile?.user_type || bidderProfile.user_type === "homeowner") {
+    return {
+      error:
+        "Homeowners cannot submit bids. Post your project to receive bids from contractors.",
+    }
+  }
+
   const projectId = formData.get("projectId") as string
   const bidderRole = formData.get("bidder_role") as string
   const quoteAmount = parseInt(formData.get("quote_amount") as string)

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { normalizeZip } from "@/lib/utils/jurisdiction"
 import { isWestOf280 } from "@/lib/utils/geo"
+import { fetchATTOMParcelData } from "@/lib/utils/attom"
 
 const VALID_PROJECT_TYPES = [
   "adu_detached",
@@ -63,7 +64,6 @@ export async function createProject(
   }
 
   if (!jurisdictionId) {
-    // Try default Palo Alto jurisdiction
     const { data: paJurisdiction } = await supabase
       .from("jurisdictions")
       .select("id")
@@ -76,13 +76,31 @@ export async function createProject(
     return { error: "Could not find jurisdiction." }
   }
 
+  // Coordinates from Places
+  const mapLat = formLat ? parseFloat(formLat) : null
+  const mapLng = formLng ? parseFloat(formLng) : null
+
   // Auto-detect west of 280
-  const lat = formLat ? parseFloat(formLat) : null
-  const lng = formLng ? parseFloat(formLng) : null
   const fireWestOf280 =
-    lat && lng && !isNaN(lat) && !isNaN(lng)
-      ? isWestOf280(lat, lng)
+    mapLat && mapLng && !isNaN(mapLat) && !isNaN(mapLng)
+      ? isWestOf280(mapLat, mapLng)
       : false
+
+  // ATTOM parcel lookup
+  let lotSizeSqft: number | null = null
+  let yearBuilt: number | null = null
+  let zoning: string | null = null
+  let zoningDescription: string | null = null
+  let apn: string | null = null
+
+  const parcelData = await fetchATTOMParcelData(address)
+  if (parcelData) {
+    lotSizeSqft = parcelData.lotSizeSqft
+    yearBuilt = parcelData.yearBuilt
+    zoning = parcelData.zoning
+    zoningDescription = parcelData.zoningDescription
+    apn = parcelData.apn
+  }
 
   // Insert project
   let projectId: string
@@ -98,6 +116,13 @@ export async function createProject(
         project_type: projectType,
         scope_description: scopeDescription,
         jurisdiction_id: jurisdictionId,
+        lot_size_sqft: lotSizeSqft,
+        year_built: yearBuilt,
+        zoning,
+        zoning_description: zoningDescription,
+        map_lat: mapLat,
+        map_lng: mapLng,
+        apn,
       })
       .select("id")
       .single()

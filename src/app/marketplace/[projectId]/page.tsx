@@ -67,6 +67,8 @@ export default async function MarketplaceProjectPage({
     .maybeSingle()
 
   const isOwner = hp.homeowner_id === user.id
+  const isHomeowner =
+    !profile?.user_type || profile.user_type === "homeowner"
   const showFullAddress = !!existingBid || isOwner
 
   return (
@@ -205,7 +207,21 @@ export default async function MarketplaceProjectPage({
 
         {/* Right — Bid form */}
         <div className="lg:col-span-5">
-          {isOwner ? (
+          {isHomeowner && !isOwner ? (
+            <div className="rounded-lg border border-border bg-card p-5">
+              <p className="text-sm text-muted-foreground">
+                This is a contractor marketplace. Homeowners post projects —
+                contractors, architects, and engineers submit bids.
+              </p>
+              <Link
+                href="/homeowner/dashboard"
+                className="mt-3 inline-flex items-center gap-1 text-sm text-primary hover:underline"
+              >
+                <ArrowLeft className="size-3" />
+                Back to my projects
+              </Link>
+            </div>
+          ) : isOwner ? (
             <div className="rounded-lg border border-border bg-card p-5">
               <p className="text-sm text-muted-foreground">
                 This is your project. View bids on your{" "}

@@ -56,10 +56,12 @@ export async function signUp(
 ): Promise<{ error: string | null }> {
   const supabase = await createClient()
 
+  console.log("[auth] signUp called with user_type:", userType)
+
   let errorMessage: string | null = null
 
   try {
-    const { error } = await supabase.auth.signUp({
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -68,6 +70,14 @@ export async function signUp(
     })
     if (error) {
       errorMessage = error.message
+    } else if (signUpData.user) {
+      // Safety net: explicitly set user_type in profiles
+      // (trigger sometimes misses on fast signups)
+      await supabase
+        .from("profiles")
+        .update({ user_type: userType, full_name: fullName })
+        .eq("id", signUpData.user.id)
+      console.log("[auth] profile updated with user_type:", userType)
     }
   } catch {
     errorMessage = "An unexpected error occurred."

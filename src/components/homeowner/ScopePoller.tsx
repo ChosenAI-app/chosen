@@ -68,12 +68,12 @@ export function ScopePoller({ projectId }: { projectId: string }) {
   const progress = Math.min(((step + 1) / STEPS.length) * 90, 90)
 
   return (
-    <div className="relative flex min-h-[500px] w-full flex-col items-center justify-center overflow-hidden rounded-lg border border-border bg-card">
+    <div className="relative flex min-h-[500px] w-full flex-col items-center justify-center pt-8 overflow-hidden rounded-lg border border-border bg-card">
       {/* Ambient background glow */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" />
 
       {/* Pulsing rings */}
-      <div className="relative mb-10">
+      <div className="relative mb-16">
         <div
           className="absolute inset-0 -m-8 animate-ping rounded-full border border-primary/20"
           style={{ animationDuration: "2s" }}
