@@ -60,17 +60,17 @@ export async function GlobalNav({ user, profile }: GlobalNavProps) {
             >
               Marketplace
             </Link>
-            {pendingInviteCount > 0 && (
-              <Link
-                href="/invitations"
-                className="relative hidden text-xs text-muted-foreground hover:text-foreground sm:block"
-              >
-                Invitations
+            <Link
+              href="/invitations"
+              className="relative hidden text-xs text-muted-foreground hover:text-foreground sm:block"
+            >
+              Invitations
+              {pendingInviteCount > 0 && (
                 <span className="absolute -right-3 -top-1.5 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
                   {pendingInviteCount}
                 </span>
-              </Link>
-            )}
+              )}
+            </Link>
             <Link
               href={settingsLink}
               className="hidden text-xs font-medium text-primary hover:underline sm:block"
