@@ -26,10 +26,9 @@ export default async function DashboardLayout({
     .eq("id", user.id)
     .maybeSingle()
 
-  // Redirect homeowners to their dashboard
-  if (profile?.user_type === "homeowner") {
-    redirect("/homeowner/dashboard")
-  }
+  // No role-based redirect here — homeowners may access contractor projects
+  // they've been invited to. Access control is handled by getUserRole() on
+  // each project page.
 
   return (
     <div className="flex min-h-screen flex-col">
