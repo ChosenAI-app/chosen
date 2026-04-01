@@ -55,6 +55,11 @@ export function MapSection({
         parcelGeometry={hasExactCoords ? parcelGeometry : null}
         apiKey={apiKey}
       />
+      {/* Controls hint */}
+      <div className="absolute bottom-3 right-3 z-10 rounded-md bg-black/60 px-3 py-2 text-xs text-white/80 backdrop-blur-sm">
+        <p>Scroll to zoom · Click + drag to rotate</p>
+        <p className="mt-0.5">Right-click + drag to tilt</p>
+      </div>
       {useFallback && (
         <div className="absolute top-3 left-3 right-3 z-10 rounded-md bg-primary/90 px-3 py-2 text-center text-xs font-medium text-primary-foreground">
           Showing Palo Alto area — submit with a full address for your specific

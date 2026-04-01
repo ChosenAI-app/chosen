@@ -105,30 +105,26 @@ export default function ProjectExploreMap({
 
               // Set initial camera position instantly
               viewer.camera.flyTo({
-                destination: Cesium.Cartesian3.fromDegrees(lng, lat, 600),
+                destination: Cesium.Cartesian3.fromDegrees(lng, lat, 400),
                 orientation: {
                   heading: Cesium.Math.toRadians(45),
-                  pitch: Cesium.Math.toRadians(-20),
+                  pitch: Cesium.Math.toRadians(-15),
                   roll: 0.0,
                 },
                 duration: 0.1,
               })
 
-              // Cinematic fly-in to 3D oblique view
+              // Cinematic fly-in to close 3D oblique view
               setTimeout(() => {
                 if (isDestroyed || !viewerRef.current) return
                 viewer.camera.flyTo({
-                  destination: Cesium.Cartesian3.fromDegrees(
-                    lng + 0.001,
-                    lat - 0.001,
-                    200
-                  ),
+                  destination: Cesium.Cartesian3.fromDegrees(lng, lat, 180),
                   orientation: {
                     heading: Cesium.Math.toRadians(330),
-                    pitch: Cesium.Math.toRadians(-35),
+                    pitch: Cesium.Math.toRadians(-40),
                     roll: 0.0,
                   },
-                  duration: 3.5,
+                  duration: 3.0,
                   easingFunction: Cesium.EasingFunction.QUADRATIC_IN_OUT,
                 })
               }, 300)

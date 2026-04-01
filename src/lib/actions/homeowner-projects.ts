@@ -83,15 +83,23 @@ export async function createHomeownerProject(formData: FormData): Promise<{
   let mapLat: number | null = null
   let mapLng: number | null = null
 
+  // Clean the address for Regrid — remove country suffix
+  const regridAddress = address
+    .replace(/, USA$/, "")
+    .replace(/, United States$/, "")
+    .trim()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let feature: any = null
+
   try {
-    // Use address as-is — Places already returns a full formatted address
-    console.log("[Regrid] Querying:", address)
-    const regridUrl = `https://app.regrid.com/api/v2/parcels/typeahead?query=${encodeURIComponent(address)}&token=${process.env.REGRID_API_KEY}`
+    console.log("[Regrid] Querying:", regridAddress)
+    const regridUrl = `https://app.regrid.com/api/v2/parcels/typeahead?query=${encodeURIComponent(regridAddress)}&token=${process.env.REGRID_API_KEY}`
     const regridRes = await fetch(regridUrl)
     if (regridRes.ok) {
       const regridJson = await regridRes.json()
       console.log("[Regrid] Raw response:", JSON.stringify(regridJson, null, 2))
-      const feature = regridJson.parcel_centroids?.features?.[0]
+      feature = regridJson.parcel_centroids?.features?.[0] ?? null
       if (feature) {
         const props = feature.properties
         regridParcelId = props?.parcelnumb ?? null
@@ -105,14 +113,46 @@ export async function createHomeownerProject(formData: FormData): Promise<{
         mapLat = props?.lat ? parseFloat(props.lat) : null
         mapLng = props?.lon ? parseFloat(props.lon) : null
       } else {
-        console.log("[Regrid] No parcels returned for query")
+        console.log("[Regrid] No parcels returned for typeahead")
       }
     } else {
       console.error("[Regrid] HTTP error:", regridRes.status, await regridRes.text())
     }
   } catch (err) {
     console.error("[Regrid] Fetch failed:", err)
-    // Continue without parcel data — non-blocking
+  }
+
+  // Fallback: try Regrid query endpoint if typeahead returns nothing
+  if (!feature && regridAddress) {
+    try {
+      const streetPart = regridAddress.split(",")[0]
+      const queryUrl = `https://app.regrid.com/api/v2/parcels/query?fields[address][ilike]=${encodeURIComponent(streetPart)}&fields[szip][eq]=${normalizedZip || "94301"}&token=${process.env.REGRID_API_KEY}&limit=1`
+      console.log("[Regrid] Trying query fallback:", queryUrl)
+      const queryRes = await fetch(queryUrl)
+      if (queryRes.ok) {
+        const queryJson = await queryRes.json()
+        console.log("[Regrid] Query fallback response:", JSON.stringify(queryJson, null, 2))
+        const queryFeature =
+          queryJson.results?.features?.[0] ??
+          queryJson.parcels?.features?.[0]
+        if (queryFeature) {
+          const props = queryFeature.properties || queryFeature.fields
+          regridParcelId = props?.parcelnumb ?? null
+          const acres = parseFloat(props?.ll_gisacre)
+          lotSizeSqft = !isNaN(acres) && acres > 0 ? Math.round(acres * 43560) : null
+          existingSqft = props?.sqft ? parseInt(props.sqft) : null
+          yearBuilt = props?.yearbuilt ? parseInt(props.yearbuilt) : null
+          zoning = props?.zoning ?? null
+          zoningDescription = props?.zoning_description ?? null
+          parcelGeometry = queryFeature.geometry ?? null
+          mapLat = props?.lat ? parseFloat(props.lat) : null
+          mapLng = props?.lon ? parseFloat(props.lon) : null
+          console.log("[Regrid] Fallback found parcel:", { lotSizeSqft, zoning, mapLat, mapLng })
+        }
+      }
+    } catch (err) {
+      console.error("[Regrid] Query fallback failed:", err)
+    }
   }
 
   // Fallback: use Google Places lat/lng if Regrid returned no coordinates
