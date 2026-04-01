@@ -191,12 +191,18 @@ export default function HomePage() {
           <span className="text-xs font-bold tracking-[0.25em] text-foreground">
             CHOSEN
           </span>
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/signup">
-              I&apos;m a Contractor
-              <ArrowRight className="ml-1 size-3" />
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/login">Log in</Link>
+            </Button>
+            <Button
+              asChild
+              size="sm"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              <Link href="/signup">Sign up free</Link>
+            </Button>
+          </div>
         </nav>
       </header>
 
@@ -294,7 +300,7 @@ export default function HomePage() {
             </p>
           </div>
           <Button asChild variant="outline" size="sm">
-            <Link href="/login">
+            <Link href="/signup">
               Join the marketplace
               <ArrowRight className="ml-1 size-3" />
             </Link>
