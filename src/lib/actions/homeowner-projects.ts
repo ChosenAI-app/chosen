@@ -19,95 +19,101 @@ const VALID_PROJECT_TYPES = [
   "conversion",
 ] as const
 
-// Santa Clara County public ArcGIS parcel API — free, no key required
-async function fetchSCCParcelData(lat: number, lng: number) {
-  try {
-    const params = new URLSearchParams({
-      geometry: JSON.stringify({
-        x: lng,
-        y: lat,
-        spatialReference: { wkid: 4326 },
-      }),
-      geometryType: "esriGeometryPoint",
-      spatialRel: "esriSpatialRelIntersects",
-      outFields: "*",
-      returnGeometry: "true",
-      f: "json",
-    })
+// ATTOM Property Data API — industry standard for US property data
+async function fetchATTOMParcelData(address: string) {
+  const attomKey = process.env.ATTOM_API_KEY
+  if (!attomKey) {
+    console.error("[ATTOM] ATTOM_API_KEY not set")
+    return null
+  }
 
-    const url = `https://gis.sccgov.org/arcgis/rest/services/Planning/Parcels/MapServer/0/query?${params}`
-    console.log("[SCC ArcGIS] Querying parcel at:", lat, lng)
+  try {
+    // Google Places gives "101 Alma St, Palo Alto, CA 94301, USA"
+    // ATTOM wants address1="101 Alma St" address2="Palo Alto, CA"
+    const cleanAddress = address
+      .replace(/, USA$/, "")
+      .replace(/, United States$/, "")
+      .trim()
+    const parts = cleanAddress.split(",")
+    const address1 = parts[0]?.trim()
+    const address2 = parts.slice(1).join(",").trim()
+
+    if (!address1 || !address2) {
+      console.error("[ATTOM] Could not parse address:", address)
+      return null
+    }
+
+    const url = `https://api.gateway.attomdata.com/propertyapi/v1.0.0/property/detail?address1=${encodeURIComponent(address1)}&address2=${encodeURIComponent(address2)}`
+    console.log("[ATTOM] Querying:", url)
 
     const res = await fetch(url, {
-      headers: { "User-Agent": "ChosenAI/1.0 (chosenai.com)" },
+      headers: {
+        apikey: attomKey,
+        Accept: "application/json",
+      },
       signal: AbortSignal.timeout(8000),
     })
 
+    console.log("[ATTOM] HTTP status:", res.status)
+
     if (!res.ok) {
-      console.error("[SCC ArcGIS] HTTP error:", res.status)
+      const text = await res.text()
+      console.error("[ATTOM] Error response:", text)
       return null
     }
 
     const json = await res.json()
-    console.log(
-      "[SCC ArcGIS] Response features:",
-      json.features?.length ?? 0
-    )
+    console.log("[ATTOM] Raw response:", JSON.stringify(json, null, 2))
 
-    const feature = json.features?.[0]
-    if (!feature) {
-      console.log("[SCC ArcGIS] No parcel found at coordinates")
+    const property = json.property?.[0]
+    if (!property) {
+      console.log("[ATTOM] No property found for address")
       return null
     }
 
-    const attrs = feature.attributes
-    console.log("[SCC ArcGIS] Attributes:", JSON.stringify(attrs, null, 2))
+    // lot.lotsize2 = sq ft, lot.lotsize1 = acres
+    const lotSizeSqft = property.lot?.lotsize2
+      ? Math.round(Number(property.lot.lotsize2))
+      : property.lot?.lotsize1
+        ? Math.round(Number(property.lot.lotsize1) * 43560)
+        : null
 
-    const rings = feature.geometry?.rings?.[0]
+    const yearBuilt = property.summary?.yearbuilt
+      ? parseInt(property.summary.yearbuilt)
+      : null
 
-    // Convert ArcGIS ring coords to GeoJSON Polygon
-    let parcelGeometry = null
-    if (rings && rings.length > 0) {
-      parcelGeometry = {
-        type: "Polygon",
-        coordinates: [rings.map(([x, y]: number[]) => [x, y])],
-      }
-    }
+    const existingSqft = property.building?.size?.bldgsize
+      ? parseInt(property.building.size.bldgsize)
+      : property.building?.size?.grosssize
+        ? parseInt(property.building.size.grosssize)
+        : property.building?.size?.livingsize
+          ? parseInt(property.building.size.livingsize)
+          : null
 
-    // Try multiple possible field names — SCC ArcGIS field names vary by layer
-    const lotAcres = parseFloat(
-      attrs.LotSizeAcres ?? attrs.LotAcres ?? attrs.LOTACRES ?? attrs.LOT_ACRES ?? "0"
-    )
-    const lotSqft =
-      attrs.LotSizeSqFt ?? attrs.LOTSIZESQFT ?? attrs.LOT_SIZE ?? attrs.LotSize
-    const yrBuilt =
-      attrs.YearBuilt ?? attrs.YEARBUILT ?? attrs.YEAR_BUILT ?? attrs.YrBuilt
-    const totalSqft =
-      attrs.TotalBldgSqFt ?? attrs.TotalSqFt ?? attrs.ImprovSqFt ??
-      attrs.TOTALSQFT ?? attrs.BldgSqFt1stFlr
-    const zoningCode =
-      attrs.ZoningCode ?? attrs.ZONINGCODE ?? attrs.Zoning ?? attrs.ZONING
-    const landUse =
-      attrs.LandUseCode ?? attrs.LandUseDescription ?? attrs.LANDUSE ??
-      attrs.LandUse ?? attrs.UseCode
-    const apn =
-      attrs.APN ?? attrs.APN_DASH ?? attrs.PARCELID ?? attrs.ParcelNumber
+    const zoning = property.summary?.propclass ?? null
+    const zoningDescription = property.summary?.proptype ?? null
+    const apn = property.identifier?.apn ?? null
+
+    console.log("[ATTOM] Extracted:", {
+      apn,
+      lotSizeSqft,
+      yearBuilt,
+      existingSqft,
+      zoning,
+      zoningDescription,
+    })
 
     return {
-      apn: apn ?? null,
-      lotSizeSqft: lotSqft
-        ? Math.round(Number(lotSqft))
-        : lotAcres > 0
-          ? Math.round(lotAcres * 43560)
-          : null,
-      yearBuilt: yrBuilt ? parseInt(String(yrBuilt)) : null,
-      existingSqft: totalSqft ? parseInt(String(totalSqft)) : null,
-      zoning: zoningCode ?? null,
-      zoningDescription: landUse ?? null,
-      parcelGeometry,
+      apn,
+      lotSizeSqft,
+      yearBuilt,
+      existingSqft,
+      zoning,
+      zoningDescription,
+      parcelGeometry: null,
     }
   } catch (err) {
-    console.error("[SCC ArcGIS] Error:", err)
+    console.error("[ATTOM] Error:", err)
     return null
   }
 }
@@ -165,7 +171,7 @@ export async function createHomeownerProject(formData: FormData): Promise<{
     jurisdiction = data
   }
 
-  // Get parcel data from Santa Clara County ArcGIS using Google Places lat/lng
+  // Get parcel data from ATTOM using address
   let regridParcelId: string | null = null
   let lotSizeSqft: number | null = null
   let existingSqft: number | null = null
@@ -179,26 +185,15 @@ export async function createHomeownerProject(formData: FormData): Promise<{
   if (isNaN(mapLat as number)) mapLat = null
   if (isNaN(mapLng as number)) mapLng = null
 
-  if (mapLat && mapLng) {
-    const parcelData = await fetchSCCParcelData(mapLat, mapLng)
-    if (parcelData) {
-      regridParcelId = parcelData.apn
-      lotSizeSqft = parcelData.lotSizeSqft
-      existingSqft = parcelData.existingSqft
-      yearBuilt = parcelData.yearBuilt
-      zoning = parcelData.zoning
-      zoningDescription = parcelData.zoningDescription
-      parcelGeometry = parcelData.parcelGeometry
-      console.log("[SCC ArcGIS] Parcel data:", {
-        apn: regridParcelId,
-        lotSizeSqft,
-        yearBuilt,
-        zoning,
-        existingSqft,
-      })
-    }
-  } else {
-    console.log("[SCC ArcGIS] No coordinates from Places — skipping parcel lookup")
+  const parcelData = await fetchATTOMParcelData(address)
+  if (parcelData) {
+    regridParcelId = parcelData.apn
+    lotSizeSqft = parcelData.lotSizeSqft
+    existingSqft = parcelData.existingSqft
+    yearBuilt = parcelData.yearBuilt
+    zoning = parcelData.zoning
+    zoningDescription = parcelData.zoningDescription
+    parcelGeometry = parcelData.parcelGeometry
   }
 
   console.log("[coords] mapLat:", mapLat, "mapLng:", mapLng)
