@@ -199,14 +199,50 @@ export default async function ProjectDetailPage({
                   })}
                 </p>
               </div>
-              {project.scope_description && (
-                <div>
-                  <p className="text-xs text-muted-foreground">Scope</p>
-                  <p className="mt-0.5 text-sm text-foreground">
-                    {project.scope_description}
-                  </p>
-                </div>
-              )}
+              {(() => {
+                let scopeSummary: string | null = null
+                let originalDescription: string | null = null
+                try {
+                  const parsed = JSON.parse(project.scope_description ?? "{}")
+                  if (parsed.ai_scope) {
+                    scopeSummary = parsed.ai_scope.scope_summary ?? null
+                    originalDescription = parsed.original_description ?? null
+                  } else {
+                    originalDescription = project.scope_description
+                  }
+                } catch {
+                  originalDescription = project.scope_description
+                }
+
+                return (
+                  <>
+                    {scopeSummary && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                          AI Scope
+                        </p>
+                        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-4">
+                          {scopeSummary}
+                        </p>
+                        <Link
+                          href={`/projects/${id}/explore`}
+                          className="text-xs text-primary hover:underline mt-2 inline-block"
+                        >
+                          View full analysis →
+                        </Link>
+                      </div>
+                    )}
+                    {!scopeSummary && originalDescription && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Scope</p>
+                        <p className="mt-0.5 text-sm text-foreground">
+                          {originalDescription}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
             </div>
           </div>
 

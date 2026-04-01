@@ -4,6 +4,7 @@ import Link from "next/link"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { MapSection } from "@/components/homeowner/MapSection"
 import { ContractorChatWindow } from "@/components/contractor/ContractorChatWindow"
+import { ContractorScopePoller } from "@/components/contractor/ContractorScopePoller"
 import { Button } from "@/components/ui/button"
 import {
   ArrowLeft,
@@ -280,14 +281,15 @@ export default async function ContractorExplorePage({
             </>
           ) : (
             <div className="flex flex-col items-center gap-4 rounded-lg border border-border bg-card p-8 text-center">
+              <ContractorScopePoller projectId={project.id} />
               <div className="flex size-8 items-center justify-center rounded-full bg-primary/20">
                 <div className="size-3 animate-pulse rounded-full bg-primary" />
               </div>
               <div>
                 <p className="font-semibold">Generating project brief...</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  AI is analyzing permits, costs, and feasibility. This takes
-                  about 30 seconds.
+                  AI is analyzing permits, costs, and feasibility. The page
+                  updates automatically.
                 </p>
               </div>
               <p className="text-xs text-muted-foreground">

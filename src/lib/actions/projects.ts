@@ -218,12 +218,22 @@ async function generateContractorScope(projectId: string): Promise<void> {
       prompt: `Project at ${project.address}. Type: ${project.project_type}. Lot: ${project.lot_size_sqft ?? "unknown"} SF. Zoning: ${project.zoning ?? "unknown"}. Year built: ${project.year_built ?? "unknown"}.`,
     })
 
+    // Preserve the user's original description
+    const originalDescription = (() => {
+      try {
+        const p = JSON.parse(project.scope_description ?? "{}")
+        return p.original_description ?? project.scope_description
+      } catch {
+        return project.scope_description
+      }
+    })()
+
     await supabase
       .from("projects")
       .update({
         scope_description: JSON.stringify({
           ai_scope: object,
-          original_description: project.scope_description,
+          original_description: originalDescription,
         }),
       })
       .eq("id", projectId)
