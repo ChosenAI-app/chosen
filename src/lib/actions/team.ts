@@ -1,30 +1,28 @@
-/*
- * SETUP REQUIRED before testing:
- * 1. Add to .env.local:
- *    SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
- *    Get from: Supabase dashboard → Settings → API →
- *    Service role key (keep secret!)
- * 2. Add same var to Vercel environment variables
- * 3. Never commit this key to git
- */
+"use server"
 
-"use server";
+import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
+import { Resend } from "resend"
 
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { revalidatePath } from "next/cache";
+const ROLE_LABELS: Record<string, string> = {
+  co_owner: "Co-Owner",
+  architect: "Architect",
+  engineer: "Engineer",
+  inspector: "Inspector",
+  client: "Client",
+}
 
 export async function inviteTeamMember(
   formData: FormData
 ): Promise<{ error: string | null }> {
-  // a. Extract fields
-  const projectId = formData.get("projectId") as string | null;
-  const rawEmail = formData.get("email") as string | null;
-  const role = formData.get("role") as string | null;
+  const projectId = formData.get("projectId") as string | null
+  const rawEmail = formData.get("email") as string | null
+  const role = formData.get("role") as string | null
 
-  // b. Validate
   if (!projectId || !rawEmail || !role) {
-    return { error: "All fields are required." };
+    return { error: "All fields are required." }
   }
 
   const VALID_INVITABLE_ROLES = [
@@ -33,85 +31,74 @@ export async function inviteTeamMember(
     "engineer",
     "inspector",
     "client",
-  ];
+  ]
   if (!VALID_INVITABLE_ROLES.includes(role)) {
-    return { error: "Invalid role." };
+    return { error: "Invalid role." }
   }
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(rawEmail)) {
-    return { error: "Please enter a valid email address." };
+    return { error: "Please enter a valid email address." }
   }
 
-  // c. Normalize
-  const normalizedEmail = rawEmail.toLowerCase().trim();
+  const normalizedEmail = rawEmail.toLowerCase().trim()
 
-  // d. Auth check
-  const supabase = await createClient();
+  const supabase = await createClient()
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser()
 
   if (!user) {
-    return { error: "Not authenticated." };
+    return { error: "Not authenticated." }
   }
 
-  // Check owner cannot invite themselves
   if (normalizedEmail === user.email?.toLowerCase()) {
-    return { error: "You are already on this project as the contractor." };
+    return { error: "You are already on this project as the contractor." }
   }
 
-  // e. Verify ownership
   const { data: project } = await supabase
     .from("projects")
-    .select("user_id")
+    .select("user_id, address, project_type")
     .eq("id", projectId)
-    .single();
+    .single()
 
   if (!project || project.user_id !== user.id) {
-    return { error: "Project not found." };
+    return { error: "Project not found." }
   }
 
-  // f. Duplicate check
   const { data: existingMember } = await supabase
     .from("team_members")
     .select("id")
     .eq("project_id", projectId)
     .eq("invited_email", normalizedEmail)
-    .maybeSingle();
+    .maybeSingle()
 
   if (existingMember) {
-    return { error: "This person is already on the project." };
+    return { error: "This person is already on the project." }
   }
 
-  // g. Look up if email has a Chosen account
-  let existingUserId: string | null = null;
-  let inviteStatus: "accepted" | "pending" = "pending";
+  // Check if email has an existing account (for user_id link, but always pending)
+  let existingUserId: string | null = null
+  let isExistingUser = false
 
   try {
-    const admin = createAdminClient();
-    const { data, error: adminError } = await admin.auth.admin.listUsers({
+    const admin = createAdminClient()
+    const { data } = await admin.auth.admin.listUsers({
       page: 1,
       perPage: 1000,
-    });
-
-    if (adminError) {
-      return { error: adminError.message };
-    }
-
-    const existing = data.users.find(
+    })
+    const existing = data?.users?.find(
       (u) => u.email?.toLowerCase() === normalizedEmail
-    );
-
+    )
     if (existing) {
-      existingUserId = existing.id;
-      inviteStatus = "accepted";
+      existingUserId = existing.id
+      isExistingUser = true
     }
   } catch {
-    return { error: "Failed to look up user." };
+    // Non-blocking — proceed without user_id link
   }
 
-  // h. Insert team member
+  // All invites start as PENDING — no auto-approve
   const { error: insertError } = await supabase
     .from("team_members")
     .insert({
@@ -119,87 +106,152 @@ export async function inviteTeamMember(
       user_id: existingUserId,
       role,
       invited_email: normalizedEmail,
-      invite_status: inviteStatus,
-    });
+      invite_status: "pending",
+    })
 
   if (insertError) {
-    return { error: insertError.message };
+    return { error: insertError.message }
   }
 
-  // i. Send invite email via Resend
+  // Send email
+  const projectAddress =
+    project.address?.replace(/, USA$/, "") ?? "a project"
+  const projectType =
+    project.project_type?.replace(/_/g, " ") ?? "project"
+  const roleLabel = ROLE_LABELS[role] ?? role
+
+  const { data: inviterProfile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .maybeSingle()
+  const inviterName = inviterProfile?.full_name ?? "A contractor"
+
   try {
-    const { data: proj } = await supabase
-      .from("projects")
-      .select("address")
-      .eq("id", projectId)
-      .maybeSingle();
+    const resend = new Resend(process.env.RESEND_API_KEY)
 
-    const { Resend } = await import("resend");
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    await resend.emails.send({
-      from: "Chosen <notifications@chosenai.com>",
-      to: normalizedEmail,
-      subject: "You've been invited to collaborate on a project",
-      text: `You've been invited to join a project on Chosen as ${role}.
+    if (isExistingUser) {
+      await resend.emails.send({
+        from: "Chosen <notifications@chosenai.com>",
+        to: normalizedEmail,
+        subject: `${inviterName} invited you to a project on Chosen`,
+        text: `Hi,
 
-Sign up or log in at chosenai.com to accept the invitation and access the project.
+${inviterName} has invited you to collaborate on a ${projectType} project at ${projectAddress} as ${roleLabel}.
 
-Project address: ${proj?.address ?? "Palo Alto project"}
-Your role: ${role}
+Log in to Chosen to review and accept the invitation:
 
-Questions? Reply to this email.`,
-    });
-    console.log("[team invite] Email sent to:", normalizedEmail);
+https://chosenai.com/invitations
+
+— The Chosen Team`,
+      })
+    } else {
+      await resend.emails.send({
+        from: "Chosen <notifications@chosenai.com>",
+        to: normalizedEmail,
+        subject: `${inviterName} invited you to collaborate on a construction project`,
+        text: `Hi,
+
+${inviterName} has invited you to collaborate on a ${projectType} project at ${projectAddress} on Chosen as ${roleLabel}.
+
+Chosen is the platform for residential construction project management and permitting in Palo Alto.
+
+Create your free account to accept this invitation:
+
+https://chosenai.com/signup
+
+Once you sign up with this email address (${normalizedEmail}), you'll automatically see the pending invitation.
+
+— The Chosen Team`,
+      })
+    }
+    console.log(
+      "[team invite] Email sent to:",
+      normalizedEmail,
+      "existing user:",
+      isExistingUser
+    )
   } catch (emailErr) {
-    console.error("[team invite] Email failed (non-blocking):", emailErr);
+    console.error("[team invite] Email failed (non-blocking):", emailErr)
   }
 
-  // j. Revalidate
-  revalidatePath("/projects/[id]", "page");
+  revalidatePath("/projects/[id]", "page")
+  return { error: null }
+}
 
-  // k. Return
-  return { error: null };
+export async function acceptInvitation(
+  inviteId: string,
+  projectId: string
+): Promise<void> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return
+
+  await supabase
+    .from("team_members")
+    .update({
+      invite_status: "accepted",
+      user_id: user.id,
+    })
+    .eq("id", inviteId)
+    .eq("invited_email", user.email!)
+
+  revalidatePath("/invitations")
+  revalidatePath(`/projects/${projectId}`)
+  redirect(`/projects/${projectId}`)
+}
+
+export async function declineInvitation(inviteId: string): Promise<void> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return
+
+  await supabase
+    .from("team_members")
+    .update({ invite_status: "declined" })
+    .eq("id", inviteId)
+    .eq("invited_email", user.email!)
+
+  revalidatePath("/invitations")
 }
 
 export async function removeTeamMember(
   memberId: string,
   projectId: string
 ): Promise<{ error: string | null }> {
-  // a. Auth check
-  const supabase = await createClient();
+  const supabase = await createClient()
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser()
 
   if (!user) {
-    return { error: "Not authenticated." };
+    return { error: "Not authenticated." }
   }
 
-  // b. Verify ownership
   const { data: project } = await supabase
     .from("projects")
     .select("user_id")
     .eq("id", projectId)
-    .single();
+    .single()
 
   if (!project || project.user_id !== user.id) {
-    return { error: "Project not found." };
+    return { error: "Project not found." }
   }
 
-  // c. Delete
   const { error: deleteError } = await supabase
     .from("team_members")
     .delete()
     .eq("id", memberId)
-    .eq("project_id", projectId);
+    .eq("project_id", projectId)
 
   if (deleteError) {
-    return { error: deleteError.message };
+    return { error: deleteError.message }
   }
 
-  // d. Revalidate
-  revalidatePath("/projects/[id]", "page");
-
-  // e. Return
-  return { error: null };
+  revalidatePath("/projects/[id]", "page")
+  return { error: null }
 }

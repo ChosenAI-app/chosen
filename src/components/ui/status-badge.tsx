@@ -19,6 +19,7 @@ const STATUS_STYLES: Record<string, string> = {
   construction: "bg-orange-950 text-orange-300",
   complete: "bg-green-950 text-green-200",
   cancelled: "bg-red-950 text-red-300",
+  declined: "bg-red-950 text-red-300",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -42,6 +43,7 @@ const STATUS_LABELS: Record<string, string> = {
   construction: "Construction",
   complete: "Complete",
   cancelled: "Cancelled",
+  declined: "Declined",
 };
 
 interface StatusBadgeProps {

@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { createClient } from "@/lib/supabase/server"
 import { signOut } from "@/lib/actions/auth"
 import { Button } from "@/components/ui/button"
 
@@ -10,7 +11,7 @@ interface GlobalNavProps {
   } | null
 }
 
-export function GlobalNav({ user, profile }: GlobalNavProps) {
+export async function GlobalNav({ user, profile }: GlobalNavProps) {
   const userType = profile?.user_type ?? "homeowner"
   const isHomeowner = userType === "homeowner"
 
@@ -21,6 +22,18 @@ export function GlobalNav({ user, profile }: GlobalNavProps) {
 
   const projectsLink = isHomeowner ? "/homeowner/dashboard" : "/dashboard"
   const settingsLink = isHomeowner ? "/homeowner/settings" : "/settings"
+
+  // Fetch pending invite count
+  let pendingInviteCount = 0
+  if (user.email) {
+    const supabase = await createClient()
+    const { count } = await supabase
+      .from("team_members")
+      .select("id", { count: "exact", head: true })
+      .eq("invited_email", user.email)
+      .eq("invite_status", "pending")
+    pendingInviteCount = count ?? 0
+  }
 
   return (
     <>
@@ -46,6 +59,17 @@ export function GlobalNav({ user, profile }: GlobalNavProps) {
               className="hidden text-xs text-muted-foreground hover:text-foreground sm:block"
             >
               Marketplace
+            </Link>
+            <Link
+              href="/invitations"
+              className="relative hidden text-xs text-muted-foreground hover:text-foreground sm:block"
+            >
+              Invitations
+              {pendingInviteCount > 0 && (
+                <span className="absolute -right-3 -top-1.5 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                  {pendingInviteCount}
+                </span>
+              )}
             </Link>
             <Link
               href={settingsLink}
