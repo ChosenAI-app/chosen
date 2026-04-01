@@ -1,5 +1,4 @@
--- Add parcel data columns to contractor projects table
-ALTER TABLE public.projects
+ALTER TABLE public.projects 
   ADD COLUMN IF NOT EXISTS lot_size_sqft integer,
   ADD COLUMN IF NOT EXISTS year_built integer,
   ADD COLUMN IF NOT EXISTS zoning text,
