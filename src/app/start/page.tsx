@@ -47,7 +47,6 @@ export default function StartPage() {
   const [placeLng, setPlaceLng] = useState("")
 
   // Step 2 fields
-  const [fireWestOf280, setFireWestOf280] = useState<"yes" | "no" | "">("")
   const [fireSprinklersExist, setFireSprinklersExist] = useState<
     "yes" | "no" | ""
   >("")
@@ -198,7 +197,7 @@ export default function StartPage() {
   function handleSubmit() {
     setError(null)
 
-    if (!fireWestOf280 || !fireSprinklersExist || !hasEarthwork) {
+    if (!fireSprinklersExist || !hasEarthwork) {
       setError("Please answer all questions.")
       return
     }
@@ -211,7 +210,6 @@ export default function StartPage() {
     if (description.trim()) {
       formData.set("description", description.trim())
     }
-    formData.set("fire_west_of_280", fireWestOf280)
     formData.set("fire_sprinklers_exist", fireSprinklersExist)
     formData.set("has_earthwork", hasEarthwork)
     const lat = selectedLatRef.current || placeLat
@@ -331,42 +329,13 @@ export default function StartPage() {
             {step === 2 && (
               <>
                 <h1 className="text-xl font-bold tracking-tight">
-                  A few more details
+                  Two quick questions
                 </h1>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  These determine which permits your project requires.
+                  These help us identify which permits your project requires.
                 </p>
 
                 <div className="mt-6 flex flex-col gap-6">
-                  <fieldset>
-                    <legend className="text-sm font-medium text-foreground">
-                      Is the property west of Highway 280?
-                    </legend>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      This triggers a Palo Alto Fire Department review.
-                    </p>
-                    <div className="mt-2 flex gap-3">
-                      <Button
-                        type="button"
-                        variant={
-                          fireWestOf280 === "yes" ? "default" : "outline"
-                        }
-                        size="sm"
-                        onClick={() => setFireWestOf280("yes")}
-                      >
-                        Yes
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={fireWestOf280 === "no" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setFireWestOf280("no")}
-                      >
-                        No
-                      </Button>
-                    </div>
-                  </fieldset>
-
                   <fieldset>
                     <legend className="text-sm font-medium text-foreground">
                       Does the main house have fire sprinklers?

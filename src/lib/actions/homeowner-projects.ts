@@ -129,6 +129,38 @@ async function fetchATTOMParcelData(address: string) {
   }
 }
 
+// Highway 280 waypoints through Palo Alto (lat, lng pairs NW to SE)
+const HWY_280_WAYPOINTS: [number, number][] = [
+  [37.481, -122.204],
+  [37.46, -122.189],
+  [37.435, -122.175],
+  [37.42, -122.162],
+  [37.395, -122.145],
+  [37.37, -122.12],
+]
+
+function isWestOf280(lat: number, lng: number): boolean {
+  for (let i = 0; i < HWY_280_WAYPOINTS.length - 1; i++) {
+    const [lat1, lng1] = HWY_280_WAYPOINTS[i]
+    const [lat2, lng2] = HWY_280_WAYPOINTS[i + 1]
+
+    if (lat >= lat2 && lat <= lat1) {
+      const t = (lat - lat2) / (lat1 - lat2)
+      const hwy280Lng = lng2 + t * (lng1 - lng2)
+      const isWest = lng < hwy280Lng
+      console.log(
+        `[280 check] Property lng: ${lng}, 280 lng at lat ${lat}: ${hwy280Lng.toFixed(4)}, west: ${isWest}`
+      )
+      return isWest
+    }
+  }
+
+  console.log(
+    `[280 check] Lat ${lat} outside Palo Alto range — defaulting to not west of 280`
+  )
+  return false
+}
+
 export async function createHomeownerProject(formData: FormData): Promise<{
   data: { id: string } | null
   error: string | null
@@ -142,7 +174,6 @@ export async function createHomeownerProject(formData: FormData): Promise<{
   const formLat = formData.get("lat") as string | null
   const formLng = formData.get("lng") as string | null
 
-  const fireWestOf280 = formData.get("fire_west_of_280") === "yes"
   const fireSprinklersExist = formData.get("fire_sprinklers_exist") === "yes"
   const hasEarthwork = formData.get("has_earthwork") === "yes"
 
@@ -206,6 +237,11 @@ export async function createHomeownerProject(formData: FormData): Promise<{
     zoningDescription = parcelData.zoningDescription
     parcelGeometry = parcelData.parcelGeometry
   }
+
+  // Auto-detect west of 280 from coordinates
+  const fireWestOf280 =
+    mapLat && mapLng ? isWestOf280(mapLat, mapLng) : false
+  console.log("[280 check] Auto-detected fire_west_of_280:", fireWestOf280)
 
   console.log("[coords] mapLat:", mapLat, "mapLng:", mapLng)
 
