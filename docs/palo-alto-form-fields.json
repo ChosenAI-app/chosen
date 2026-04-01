@@ -1,7 +1,1436 @@
 {
-    "_note": "PHASE 5 TASK: Download actual Palo Alto permit PDFs from cityofpaloalto.org and catalog every form field. See CLAUDE.md Phase 5 instructions.",
-    "building_permit_adu": {
-      "ai_fillable": [],
-      "human_required": []
+    "_meta": {
+      "researched_by": "Axel Pilette / Claude",
+      "date": "2026-03-31",
+      "completeness": "COMPLETE \u2014 All 7 steps of Accela Building Permit Pre-Application flow fully documented from live portal walkthrough. All PDF forms cataloged. JSON is ready for Phase 5 and Phase 6 development.",
+      "source_pdfs_read": [
+        "building-permit-application-8.8.23.pdf",
+        "master-adu-checklist-2026.pdf",
+        "r1-new-res-checklist-2026.pdf",
+        "fire-checklist-2021.pdf",
+        "sb407-plumbing-fixture-replacement_2024-05-16_editable.pdf",
+        "single-family-residential-project-application-packet-2026.pdf",
+        "special-inspection-and-testing-agreement_2026_march.pdf",
+        "gbsi-special-inspection-agreement_2023.pdf",
+        "affidavit-sco-detectors_06242024_fillable.pdf"
+      ],
+      "forms_that_are_upload_only_not_fillable": [
+        "Architectural Plans (Floor Plan, Elevations, Sections, etc.) \u2014 architect draws these",
+        "Structural Plans + Calculations \u2014 structural engineer draws these",
+        "Title 24 Energy Compliance Report \u2014 Title 24 consultant prepares this",
+        "CALGreen GB-1 Sheet \u2014 architect/green building consultant prepares this",
+        "Geotechnical Report \u2014 geotechnical engineer prepares this",
+        "Pollution Prevention Plan (SWPPP) \u2014 civil engineer draws this",
+        "T-1 Tree Protection Sheet \u2014 landscape architect or arborist draws this",
+        "Electrical / Mechanical / Plumbing Plans \u2014 trade contractors draw these"
+      ],
+      "still_not_researchable_by_ai": [
+        "Accela portal online fields \u2014 requires manual walkthrough with a real account at aca-prod.accela.com/PALOALTO. Create account, start fake ADU permit, screenshot every screen."
+      ],
+      "key_architecture_notes": [
+        "Palo Alto uses ONE combined Building Permit Application PDF for all trades. No separate electrical/plumbing/mechanical forms.",
+        "The Utility Service Application is submitted to the Utilities Dept SEPARATELY from the Building Permit. Submit both simultaneously.",
+        "CRITICAL: Palo Alto only allows ONE utility service per lot. Separately-metered ADU requires a dual-meter panel. Surface to homeowner during intake.",
+        "Special Inspection Agreement is NOT required at submittal \u2014 only required before permit ISSUANCE.",
+        "Smoke/CO Certification is submitted to the building inspector at final inspection, not at submittal."
+      ],
+      "submission_portal": "https://aca-prod.accela.com/PALOALTO",
+      "utility_dept": "1007 Elwell Court, Palo Alto CA 94303 | 650-566-4500",
+      "building_dept": "285 Hamilton Ave, Palo Alto CA 94301 | 650-329-2496",
+      "master_adu_filing_note": "All Master ADU applications filed under 250 Hamilton Avenue in Accela, not the project address",
+      "file_naming": "C1_[ProjectAddress]_DOCS.pdf | C1_[ProjectAddress]_APPLY.pdf | C1_[ProjectAddress]_PLAN.pdf",
+      "applicable_codes": "2025 California Building Standards Code, PAMC Chapter 15.04 & Chapter 16",
+      "accela_flow_summary": {
+        "step1_location": "Address search (auto-populates parcel + zoning) + Owner info",
+        "step2_applicant": "Auto-populated from Chosen account (Axel Pilette / Chosen shown)",
+        "step3_application_details": "Scope of work \u2014 project type, SF, valuation, all trade fields",
+        "step4_licensed_professional": "Contractor info \u2014 optional at pre-app, required before permit issuance",
+        "step5_documents": "Free-form PDF upload \u2014 no specific docs required at pre-app stage",
+        "step6_review": "Full data review with Edit buttons per section",
+        "step7_submittal": "Certification checkbox + date = electronic signature and submission"
+      }
+    },
+    "building_permit_application": {
+      "form_name": "City of Palo Alto \u2014 Building Permit Application",
+      "pdf_source": "building-permit-application-8.8.23.pdf",
+      "submitted_to": "Building Dept with permit package",
+      "when_required": "All projects",
+      "applies_to": [
+        "adu_detached",
+        "adu_attached",
+        "jadu",
+        "addition",
+        "remodel",
+        "new_construction"
+      ],
+      "ai_fillable": [
+        {
+          "field_name": "project_address",
+          "label": "Project Address",
+          "source": "homeowner_project.address"
+        },
+        {
+          "field_name": "owner_name",
+          "label": "Property Owner \u2014 Name",
+          "source": "profiles.full_name (homeowner)"
+        },
+        {
+          "field_name": "owner_address",
+          "label": "Property Owner \u2014 Mailing Address",
+          "source": "homeowner_project.address"
+        },
+        {
+          "field_name": "owner_city",
+          "label": "Property Owner \u2014 City",
+          "source": "derived from address \u2014 Palo Alto"
+        },
+        {
+          "field_name": "owner_state",
+          "label": "Property Owner \u2014 State",
+          "source": "hardcoded: CA"
+        },
+        {
+          "field_name": "owner_zip",
+          "label": "Property Owner \u2014 ZIP",
+          "source": "homeowner_project.zip_code"
+        },
+        {
+          "field_name": "owner_phone",
+          "label": "Property Owner \u2014 Phone",
+          "source": "profiles.phone (homeowner)"
+        },
+        {
+          "field_name": "owner_email",
+          "label": "Property Owner \u2014 Email",
+          "source": "auth.users.email (homeowner)"
+        },
+        {
+          "field_name": "contractor_name",
+          "label": "Contractor \u2014 Name / Company",
+          "source": "profiles.company_name or profiles.full_name (contractor)"
+        },
+        {
+          "field_name": "contractor_license_number",
+          "label": "Contractor \u2014 License #",
+          "source": "profiles.license_number"
+        },
+        {
+          "field_name": "contractor_phone",
+          "label": "Contractor \u2014 Phone",
+          "source": "profiles.phone (contractor)"
+        },
+        {
+          "field_name": "contractor_email",
+          "label": "Contractor \u2014 Email",
+          "source": "auth.users.email (contractor)"
+        },
+        {
+          "field_name": "architect_name",
+          "label": "Architect/Engineer \u2014 Name",
+          "source": "profiles.full_name (architect or engineer team member)"
+        },
+        {
+          "field_name": "architect_phone",
+          "label": "Architect/Engineer \u2014 Phone",
+          "source": "profiles.phone (architect/engineer)"
+        },
+        {
+          "field_name": "architect_email",
+          "label": "Architect/Engineer \u2014 Email",
+          "source": "auth.users.email (architect/engineer)"
+        },
+        {
+          "field_name": "description_of_work",
+          "label": "Description of Work",
+          "source": "homeowner_project.ai_scope_summary",
+          "example": "Construction of new detached ADU, approximately 850 SF, single-story, with full kitchen, bathroom, and mini-split HVAC. New electrical, plumbing, and mechanical systems."
+        },
+        {
+          "field_name": "new_structure_sf",
+          "label": "(N) Structure (SF)",
+          "source": "ADU square footage from scope",
+          "applies_to": [
+            "adu_detached",
+            "new_construction"
+          ]
+        },
+        {
+          "field_name": "addition_sf",
+          "label": "Addition (SF)",
+          "source": "addition square footage from scope",
+          "applies_to": [
+            "addition",
+            "adu_attached"
+          ]
+        },
+        {
+          "field_name": "area_of_remodel_sf",
+          "label": "Area of Remodel (SF)",
+          "source": "remodel square footage from scope",
+          "applies_to": [
+            "remodel"
+          ]
+        },
+        {
+          "field_name": "work_type_checkbox",
+          "label": "Check All That Apply",
+          "source": "project_type mapped",
+          "mapping": {
+            "adu_detached": "(N) Res. Structure",
+            "adu_attached": "Res. Addition",
+            "jadu": "Res. Addition",
+            "addition": "Res. Addition",
+            "remodel": "Res. Remodel",
+            "new_construction": "(N) Res. Structure"
+          }
+        },
+        {
+          "field_name": "construction_cost",
+          "label": "Construction Cost (Labor and Materials Only)",
+          "source": "homeowner_project.ai_cost_estimate_low",
+          "notes": "Permit fee = ~1.76% of this value"
+        },
+        {
+          "field_name": "is_flood_zone",
+          "label": "Is Property in Flood Zone?",
+          "source": "FEMA flood map lookup via map_lat + map_lng. Most Palo Alto parcels are NOT in flood zone."
+        },
+        {
+          "field_name": "total_structures_on_property",
+          "label": "Total No. of Structures on Property",
+          "source": "Regrid parcel data + 1 for new ADU"
+        },
+        {
+          "field_name": "living_units",
+          "label": "Living Units",
+          "source": "Derived: 1 existing SFR + 1 new ADU = 2"
+        },
+        {
+          "field_name": "electrical_area_sf",
+          "label": "Electrical \u2014 Area of Electric Work (SF)",
+          "source": "Same as new_structure_sf"
+        },
+        {
+          "field_name": "plumbing_area_sf",
+          "label": "Plumbing \u2014 Area of Plumbing Work (SF)",
+          "source": "Same as new_structure_sf"
+        },
+        {
+          "field_name": "mechanical_area_sf",
+          "label": "Mechanical \u2014 Area of Mechanical Work (SF)",
+          "source": "Same as new_structure_sf"
+        },
+        {
+          "field_name": "hvac_equipment",
+          "label": "Mechanical \u2014 HVAC Equipment? (Yes/No)",
+          "source": "true for any new ADU with conditioned space"
+        },
+        {
+          "field_name": "new_gas_appliances",
+          "label": "Plumbing \u2014 New Gas Appliances?",
+          "source": "true unless scope specifies all-electric"
+        }
+      ],
+      "human_required": [
+        {
+          "field_name": "contractor_address",
+          "label": "Contractor \u2014 Mailing Address",
+          "type": "text",
+          "hint": "Your business mailing address.",
+          "flag_for_dev": "profiles table needs business_address field"
+        },
+        {
+          "field_name": "existing_basement",
+          "label": "Is There an Existing Basement?",
+          "type": "boolean",
+          "hint": "Does the main house currently have a basement?"
+        },
+        {
+          "field_name": "existing_basement_conditioned",
+          "label": "Is Existing Basement Conditioned?",
+          "type": "boolean",
+          "conditional_on": "existing_basement === true"
+        },
+        {
+          "field_name": "existing_garage_type",
+          "label": "Existing Garage or Carport",
+          "type": "select",
+          "options": [
+            "Attached",
+            "Detached",
+            "None"
+          ]
+        },
+        {
+          "field_name": "is_property_historic",
+          "label": "Is Property on Palo Alto Historic Resources List?",
+          "type": "boolean",
+          "hint": "Check at paloalto.gov/Historic-Preservation"
+        },
+        {
+          "field_name": "service_upgrade_amps",
+          "label": "Electrical \u2014 Panel Upgrade? If yes, new amperage?",
+          "type": "text",
+          "hint": "Ask your electrician.",
+          "who_answers": "electrician"
+        },
+        {
+          "field_name": "electrical_meter_relocated",
+          "label": "Electrical \u2014 Meter Being Relocated?",
+          "type": "boolean",
+          "who_answers": "electrician"
+        },
+        {
+          "field_name": "water_gas_meter_upgrade",
+          "label": "Plumbing \u2014 Water or Gas Meter Being Relocated or Upgraded?",
+          "type": "boolean",
+          "who_answers": "plumber"
+        },
+        {
+          "field_name": "water_heater_replacement",
+          "label": "Plumbing \u2014 Main House Water Heater Being Replaced?",
+          "type": "boolean"
+        },
+        {
+          "field_name": "water_heater_tankless",
+          "label": "Plumbing \u2014 Tankless?",
+          "type": "boolean",
+          "conditional_on": "water_heater_replacement === true"
+        },
+        {
+          "field_name": "water_sewer_replacement",
+          "label": "Plumbing \u2014 Water/Sewer Lines Being Replaced?",
+          "type": "boolean",
+          "who_answers": "plumber"
+        },
+        {
+          "field_name": "sewer_trenchless_method",
+          "label": "Plumbing \u2014 Trenchless Method?",
+          "type": "boolean",
+          "conditional_on": "water_sewer_replacement === true"
+        },
+        {
+          "field_name": "hvac_rooftop",
+          "label": "Mechanical \u2014 Roof-Mounted HVAC?",
+          "type": "boolean",
+          "hint": "Mini-splits are usually ground/wall-mounted (No)."
+        },
+        {
+          "field_name": "furnace_replace_relocate",
+          "label": "Mechanical \u2014 Main House Furnace Being Replaced or Relocated?",
+          "type": "boolean"
+        },
+        {
+          "field_name": "number_of_ducts",
+          "label": "Mechanical \u2014 Number of HVAC Duct Runs",
+          "type": "number",
+          "hint": "For mini-split: 0."
+        },
+        {
+          "field_name": "workers_comp_carrier",
+          "label": "Workers' Comp \u2014 Carrier Name",
+          "type": "text",
+          "who_answers": "contractor"
+        },
+        {
+          "field_name": "workers_comp_policy_number",
+          "label": "Workers' Comp \u2014 Policy Number",
+          "type": "text",
+          "who_answers": "contractor"
+        },
+        {
+          "field_name": "construction_lending_agency",
+          "label": "Construction Lender Name (if applicable)",
+          "type": "text",
+          "who_answers": "homeowner"
+        },
+        {
+          "field_name": "construction_lending_address",
+          "label": "Construction Lender Address",
+          "type": "text",
+          "conditional_on": "construction_lending_agency is not blank"
+        }
+      ]
+    },
+    "utility_service_application": {
+      "form_name": "Utility Service Application \u2014 Permanent Single Family Residential",
+      "pdf_source": "single-family-residential-project-application-packet-2026.pdf",
+      "submitted_to": "Utilities Dept \u2014 SEPARATELY from building permit. Submit simultaneously to avoid delays.",
+      "timing_warning": "Electric review takes up to 45 business days. Permanent installation takes 30-40 more business days after payment. Start this early.",
+      "critical_rule": "Palo Alto allows only ONE utility service per lot. Separately-metered ADU = contractor installs dual-meter panel on main house.",
+      "covers": [
+        "Electric",
+        "Water",
+        "Gas",
+        "Wastewater"
+      ],
+      "ai_fillable": [
+        {
+          "field_name": "project_address",
+          "label": "Project Address (Legal Address)",
+          "source": "homeowner_project.address"
+        },
+        {
+          "field_name": "building_permit_number",
+          "label": "Building Dept Permit Number",
+          "source": "permit_form_fills.accela_record_id (fill after Building Dept assigns it)"
+        },
+        {
+          "field_name": "applicant_name",
+          "label": "Name of Applicant",
+          "source": "profiles.full_name (homeowner)"
+        },
+        {
+          "field_name": "applicant_role",
+          "label": "Applicant Role",
+          "source": "Owner for homeowner submission"
+        },
+        {
+          "field_name": "applicant_company",
+          "label": "Company Name",
+          "source": "blank for homeowner; profiles.company_name for contractor"
+        },
+        {
+          "field_name": "applicant_phone",
+          "label": "Applicant Phone",
+          "source": "profiles.phone (homeowner)"
+        },
+        {
+          "field_name": "applicant_email",
+          "label": "Applicant Email",
+          "source": "auth.users.email (homeowner)"
+        },
+        {
+          "field_name": "applicant_address",
+          "label": "Applicant Address",
+          "source": "homeowner_project.address"
+        },
+        {
+          "field_name": "billing_name",
+          "label": "Invoice Billing Name",
+          "source": "profiles.full_name (homeowner)"
+        },
+        {
+          "field_name": "billing_phone",
+          "label": "Billing Phone",
+          "source": "profiles.phone (homeowner)"
+        },
+        {
+          "field_name": "billing_email",
+          "label": "Billing Email",
+          "source": "auth.users.email (homeowner)"
+        },
+        {
+          "field_name": "billing_address",
+          "label": "Billing Address",
+          "source": "homeowner_project.address"
+        },
+        {
+          "field_name": "services_electric",
+          "label": "Services \u2014 Electric",
+          "source": "true for all ADU projects"
+        },
+        {
+          "field_name": "services_water",
+          "label": "Services \u2014 Water",
+          "source": "true for all ADU projects with plumbing"
+        },
+        {
+          "field_name": "services_wastewater",
+          "label": "Services \u2014 Wastewater",
+          "source": "true for all ADU projects with plumbing"
+        },
+        {
+          "field_name": "services_gas",
+          "label": "Services \u2014 Gas",
+          "source": "true unless scope specifies all-electric build",
+          "flag_for_dev": "homeowner_project needs an all_electric_build boolean field"
+        },
+        {
+          "field_name": "project_type_adu",
+          "label": "Project Type \u2014 ADU/Conversion + New Service",
+          "source": "checked for adu_detached; Addition for addition projects"
+        },
+        {
+          "field_name": "description_of_work",
+          "label": "Brief Description of Work",
+          "source": "homeowner_project.ai_scope_summary (1-2 sentence version)"
+        },
+        {
+          "field_name": "total_building_area_sqft",
+          "label": "Total Building Area Upon Completion (SF)",
+          "source": "Regrid props.sqft (existing) + new ADU SF from scope"
+        },
+        {
+          "field_name": "water_fixture_num_full_bathrooms",
+          "label": "Water Loads \u2014 Number of Full Bathrooms (ADU)",
+          "source": "1 minimum for all ADU projects per state law"
+        },
+        {
+          "field_name": "water_fixture_num_kitchens",
+          "label": "Water Loads \u2014 Number of Kitchens",
+          "source": "1 for all ADU projects \u2014 ADU requires full kitchen per state law"
+        }
+      ],
+      "human_required": [
+        {
+          "field_name": "desired_installation_date",
+          "label": "Desired Date of Installation",
+          "type": "date",
+          "hint": "When do you want utilities connected? Note: allow 30-40 business days after payment for permanent installation.",
+          "who_answers": "homeowner"
+        },
+        {
+          "field_name": "water_fixture_num_half_bathrooms",
+          "label": "Water Loads \u2014 Number of Half Bathrooms",
+          "type": "number",
+          "hint": "Any toilet+sink-only bathrooms in the ADU? Usually 0 for a studio or 1-bed ADU.",
+          "who_answers": "architect"
+        },
+        {
+          "field_name": "water_fixture_num_laundry",
+          "label": "Water Loads \u2014 Number of Laundry Connections",
+          "type": "number",
+          "hint": "Does the ADU include washer/dryer hookups? Enter 1 if yes, 0 if no.",
+          "who_answers": "homeowner or architect"
+        },
+        {
+          "field_name": "water_fixture_num_hose_bibs",
+          "label": "Water Loads \u2014 Number of Hose Bibs (outdoor spigots)",
+          "type": "number",
+          "hint": "Typically 1 for an ADU.",
+          "who_answers": "architect or contractor"
+        },
+        {
+          "field_name": "fire_sprinkler_load_gpm",
+          "label": "Water Loads \u2014 Fire Sprinkler Load (GPM)",
+          "type": "number",
+          "hint": "Only if fire sprinklers are required. Ask your fire contractor for the flow rate.",
+          "conditional_on": "fire dept review triggered"
+        },
+        {
+          "field_name": "gas_water_heater_btuh",
+          "label": "Gas \u2014 Water Heater BTU/hr",
+          "type": "number",
+          "hint": "From equipment spec sheet. Tankless: 150,000-199,000 BTU/hr. Tank: ~40,000 BTU/hr.",
+          "who_answers": "contractor"
+        },
+        {
+          "field_name": "gas_space_heating_btuh",
+          "label": "Gas/Electric \u2014 Space Heating BTU/hr",
+          "type": "number",
+          "hint": "From HVAC equipment spec sheet. Ask your HVAC contractor.",
+          "who_answers": "HVAC contractor"
+        },
+        {
+          "field_name": "gas_cooking_equipment_btuh",
+          "label": "Gas \u2014 Cooking Equipment BTU/hr",
+          "type": "number",
+          "hint": "From range/cooktop spec sheet. Typical gas range: 40,000-65,000 BTU/hr. Blank if all-electric.",
+          "conditional_on": "gas service requested"
+        },
+        {
+          "field_name": "gas_clothes_dryer_btuh",
+          "label": "Gas \u2014 Clothes Dryer BTU/hr",
+          "type": "number",
+          "hint": "Typical gas dryer: 20,000-22,000 BTU/hr. Blank if electric dryer or no dryer.",
+          "conditional_on": "gas service requested AND laundry included"
+        },
+        {
+          "field_name": "electric_ac_kva",
+          "label": "Electric \u2014 Air Conditioning (kVA)",
+          "type": "number",
+          "hint": "From AC unit spec sheet. Typical 1-ton mini-split: ~1.2 kVA. Ask your HVAC contractor.",
+          "who_answers": "HVAC contractor"
+        },
+        {
+          "field_name": "electric_ev_charger_kva",
+          "label": "Electric \u2014 EV Charger (kVA)",
+          "type": "number",
+          "hint": "Only if installing EVSE. Level 2 charger: typically 7.2 kVA. Blank if not included.",
+          "who_answers": "electrician"
+        },
+        {
+          "field_name": "electric_photovoltaic_kva",
+          "label": "Electric \u2014 Solar PV (kVA)",
+          "type": "number",
+          "hint": "Only if installing solar. Blank if not included.",
+          "who_answers": "solar contractor"
+        },
+        {
+          "field_name": "existing_main_switch_amps",
+          "label": "Electric \u2014 Existing Main Panel Size (Amps)",
+          "type": "select",
+          "options": [
+            "60",
+            "100",
+            "200",
+            "320",
+            "400",
+            "600",
+            "Other"
+          ],
+          "hint": "Your electrician can read this off the main panel. Most homes: 200A.",
+          "who_answers": "electrician"
+        },
+        {
+          "field_name": "requested_main_switch_amps",
+          "label": "Electric \u2014 Requested Main Panel Size (Amps)",
+          "type": "select",
+          "options": [
+            "125",
+            "200",
+            "225",
+            "320",
+            "400",
+            "No Change",
+            "Other"
+          ],
+          "hint": "Often 400A when adding an ADU to a 200A home. Ask your electrician.",
+          "who_answers": "electrician"
+        },
+        {
+          "field_name": "existing_service_type",
+          "label": "Electric \u2014 Existing Service Type",
+          "type": "select",
+          "options": [
+            "Overhead",
+            "Underground"
+          ],
+          "hint": "Look at where wires connect to your house \u2014 do they come from a pole above (overhead) or underground?",
+          "who_answers": "homeowner or electrician"
+        },
+        {
+          "field_name": "requested_service_type",
+          "label": "Electric \u2014 Requested Service Type",
+          "type": "select",
+          "options": [
+            "Overhead",
+            "Underground",
+            "No Change"
+          ],
+          "hint": "Most projects keep existing type. Ask your electrician.",
+          "who_answers": "electrician"
+        },
+        {
+          "field_name": "num_meters_and_location",
+          "label": "Electric \u2014 Number of Meters and Location",
+          "type": "text",
+          "hint": "IMPORTANT: Palo Alto only allows one service per lot. For a separately-metered ADU, your electrician must install a dual-meter panel. Describe meter location(s).",
+          "who_answers": "electrician",
+          "product_note": "Surface the one-service-per-lot rule prominently in Chosen UI"
+        }
+      ]
+    },
+    "fire_department_checklist": {
+      "form_name": "Fire Department Checklist for Residential Plan Review",
+      "pdf_source": "fire-checklist-2021.pdf",
+      "submitted_to": "Included with building permit application \u2014 auto-routed to Fire Dept if any Yes answer",
+      "when_required": "All residential projects except: plumbing/electrical/mechanical sub-permits only, window replacement, re-roof",
+      "ai_fillable": [
+        {
+          "field_name": "job_address",
+          "label": "Job Address",
+          "source": "homeowner_project.address"
+        },
+        {
+          "field_name": "q_new_structure_over_350sf_not_adu",
+          "label": "New structures over 350 SF other than ADU?",
+          "source": "false for pure ADU projects"
+        },
+        {
+          "field_name": "q_accessory_structure_with_plumbing_not_adu",
+          "label": "Detached accessory structures with plumbing other than ADU?",
+          "source": "false for pure ADU projects"
+        },
+        {
+          "field_name": "q_addition_over_3600sf_total",
+          "label": "Addition resulting in total floor area over 3,600 SF?",
+          "source": "calculated: Regrid props.sqft + addition_sf > 3600",
+          "applies_to": [
+            "addition"
+          ]
+        },
+        {
+          "field_name": "q_replacing_50pct_roof_or_walls",
+          "label": "Removing/replacing 50%+ of existing roof or exterior walls?",
+          "source": "infer from ai_scope_summary; default false for new detached ADU"
+        },
+        {
+          "field_name": "q_addition_50pct_of_existing_sf",
+          "label": "Addition >= 50% of existing floor area?",
+          "source": "calculated: addition_sf / Regrid props.sqft >= 0.50",
+          "applies_to": [
+            "addition"
+          ]
+        },
+        {
+          "field_name": "q_new_or_expanded_basement",
+          "label": "Adding new or expanding existing basement by 50%+?",
+          "source": "infer from scope; default false"
+        },
+        {
+          "field_name": "q_finishing_existing_basement",
+          "label": "Finishing/conditioning an existing basement?",
+          "source": "infer from scope; default false"
+        },
+        {
+          "field_name": "q_project_west_of_280",
+          "label": "Project west of Highway 280?",
+          "source": "homeowner_project.fire_west_of_280"
+        },
+        {
+          "field_name": "q_voluntarily_installing_sprinklers",
+          "label": "Voluntarily installing fire sprinklers?",
+          "source": "infer from scope; default false"
+        },
+        {
+          "field_name": "q_adu_west_of_280",
+          "label": "ADU: Located west of Highway 280?",
+          "source": "homeowner_project.fire_west_of_280",
+          "applies_to": [
+            "adu_detached",
+            "adu_attached",
+            "jadu"
+          ]
+        },
+        {
+          "field_name": "q_main_house_has_sprinklers",
+          "label": "ADU: Main house has fire sprinkler system?",
+          "source": "homeowner_project.fire_sprinklers_exist"
+        }
+      ],
+      "human_required": [
+        {
+          "field_name": "q_adu_farther_than_150ft_from_street",
+          "label": "ADU: Any portion farther than 150 feet from street?",
+          "type": "boolean",
+          "hint": "Measure from the ADU footprint to the nearest street curb. If any part exceeds 150 feet, answer Yes.",
+          "who_answers": "contractor or homeowner (physical measurement)"
+        }
+      ]
+    },
+    "sb407_plumbing_compliance": {
+      "form_name": "Plumbing Fixture Replacement Certificate of Compliance (SB 407)",
+      "pdf_source": "sb407-plumbing-fixture-replacement_2024-05-16_editable.pdf",
+      "submitted_to": "Building inspector at FINAL inspection \u2014 permit cannot be finaled without signed copy",
+      "key_shortcut": "If Regrid yearbuilt > 1994 \u2192 entire form is auto-exempt. Just needs owner signature on Q4 line. Very common for newer Palo Alto homes.",
+      "ai_fillable": [
+        {
+          "field_name": "owner_name",
+          "label": "Owner Name",
+          "source": "profiles.full_name (homeowner)"
+        },
+        {
+          "field_name": "property_address",
+          "label": "Address",
+          "source": "homeowner_project.address"
+        },
+        {
+          "field_name": "permit_number",
+          "label": "Permit No.",
+          "source": "permit_form_fills.accela_record_id"
+        },
+        {
+          "field_name": "q1_registered_historical_site",
+          "label": "Q1: Registered historical site?",
+          "source": "cross-reference Palo Alto Historic Resources list; default false"
+        },
+        {
+          "field_name": "q4_built_before_1994",
+          "label": "Q4: Built on or before January 1, 1994?",
+          "source": "Regrid props.yearbuilt \u2014 yearbuilt > 1994 \u2192 No \u2192 form exempt",
+          "notes": "yearbuilt > 1994 = full exemption. No fixture inventory needed."
+        },
+        {
+          "field_name": "property_type",
+          "label": "Property Type: Single-Family",
+          "source": "SFR + ADU = single-family for SB-407 per Palo Alto policy"
+        }
+      ],
+      "human_required": [
+        {
+          "field_name": "q2_plumber_certified_not_feasible",
+          "label": "Q2: Licensed plumber certifies installation not feasible?",
+          "type": "boolean",
+          "hint": "Almost always No.",
+          "conditional_on": "q4_built_before_1994 === true"
+        },
+        {
+          "field_name": "q3_water_disconnected",
+          "label": "Q3: Water service permanently disconnected?",
+          "type": "boolean",
+          "hint": "Almost always No.",
+          "conditional_on": "q4_built_before_1994 === true"
+        },
+        {
+          "field_name": "owner_certifies_fixtures_compliant",
+          "label": "Owner certifies all non-compliant fixtures replaced",
+          "type": "signature_required",
+          "hint": "For pre-1994 homes: certify all toilets (>1.6 gpf), showerheads (>2.5 gpm), and faucets (>2.2 gpm) have been upgraded. Your plumber can verify.",
+          "conditional_on": "q4_built_before_1994 === true"
+        }
+      ]
+    },
+    "valuation_calculator": {
+      "form_name": "Residential Valuation Form",
+      "pdf_source": "residential-valuation-form-2025-fillable.pdf",
+      "submitted_to": "Building Dept with permit application",
+      "ai_fillable": [
+        {
+          "field_name": "project_address",
+          "label": "Project Address",
+          "source": "homeowner_project.address"
+        },
+        {
+          "field_name": "total_construction_valuation",
+          "label": "Total Construction Valuation (Labor + Materials)",
+          "source": "homeowner_project.ai_cost_estimate_low"
+        },
+        {
+          "field_name": "new_living_area_sf",
+          "label": "New Living Area (SF)",
+          "source": "ADU or addition SF from scope"
+        },
+        {
+          "field_name": "calculated_permit_fee",
+          "label": "Estimated Permit Fee",
+          "source": "computed: total_construction_valuation * 0.0176",
+          "notes": "Informational \u2014 shown to homeowner pre-submission"
+        }
+      ],
+      "human_required": [
+        {
+          "field_name": "construction_type",
+          "label": "Construction Type",
+          "type": "select",
+          "options": [
+            "Type V-B (Wood Frame)",
+            "Type V-A",
+            "Type III-B",
+            "Other"
+          ],
+          "hint": "Almost all Palo Alto residential ADUs are Type V-B. Confirm with your architect.",
+          "who_answers": "architect"
+        }
+      ]
+    },
+    "special_inspection_agreement": {
+      "form_name": "Special Inspection & Testing Agreement/Schedule",
+      "pdf_source": "special-inspection-and-testing-agreement_2026_march.pdf",
+      "submitted_to": "Building Dept",
+      "when_required": "Required BEFORE PERMIT ISSUANCE (not at submittal) for projects requiring special inspection per CBC Section 1701",
+      "notes": "Two parts: (1) agreement page with signatures, (2) structural inspection schedule checklist. The checklist is filled by the structural engineer \u2014 AI cannot determine which inspection types apply without the structural drawings. Chosen should treat the checklist as upload-only / architect-fills.",
+      "ai_fillable": [
+        {
+          "field_name": "permit_number",
+          "label": "Permit Number",
+          "source": "permit_form_fills.accela_record_id"
+        },
+        {
+          "field_name": "project_address",
+          "label": "Project Address",
+          "source": "homeowner_project.address"
+        },
+        {
+          "field_name": "project_name",
+          "label": "Project Name",
+          "source": "derived: e.g. 'ADU at [address]'"
+        },
+        {
+          "field_name": "owners_name",
+          "label": "Owner's Name",
+          "source": "profiles.full_name (homeowner)"
+        },
+        {
+          "field_name": "contractor_name",
+          "label": "Name of Contractor",
+          "source": "profiles.company_name or full_name (contractor)"
+        }
+      ],
+      "human_required": [
+        {
+          "field_name": "special_inspection_agency_name",
+          "label": "Name of Special Inspection Agency",
+          "type": "text",
+          "hint": "Select a City of Palo Alto approved inspection agency. A list of approved agencies with contact info and expiration dates is included in the form (pages 3-4). Recommended: ACEQuality Control, Applied Materials & Engineering, Consolidated Engineering Labs, or Testing Engineers Inc.",
+          "who_answers": "owner or contractor"
+        },
+        {
+          "field_name": "structural_inspection_schedule_checkboxes",
+          "label": "Structural Tests and Inspection Schedule \u2014 which inspection types apply",
+          "type": "upload_or_architect_fills",
+          "hint": "This is a detailed checklist (reinforcing steel, concrete, structural steel, wood, etc.) that your structural engineer fills based on the structural drawings. AI cannot determine this. Architect/engineer provides this.",
+          "who_answers": "structural engineer"
+        }
+      ]
+    },
+    "green_building_inspection_agreement": {
+      "form_name": "Green Building Special Inspector Inspection Agreement",
+      "pdf_source": "gbsi-special-inspection-agreement_2023.pdf",
+      "submitted_to": "Building Dept with permit application \u2014 required BEFORE PERMIT ISSUANCE",
+      "when_required": "All new ADUs and additions \u2014 CALGreen compliance is mandatory",
+      "notes": "Simpler than the structural inspection agreement. AI can fill most fields and auto-select the correct CALGreen tier.",
+      "ai_fillable": [
+        {
+          "field_name": "permit_number",
+          "label": "Permit #",
+          "source": "permit_form_fills.accela_record_id"
+        },
+        {
+          "field_name": "project_address",
+          "label": "Project Address",
+          "source": "homeowner_project.address"
+        },
+        {
+          "field_name": "project_title",
+          "label": "Project Title",
+          "source": "derived: e.g. 'New Detached ADU at [address]'"
+        },
+        {
+          "field_name": "owners_name",
+          "label": "Owner's Name",
+          "source": "profiles.full_name (homeowner)"
+        },
+        {
+          "field_name": "calgreen_tier_checkbox",
+          "label": "Select Applicable Project Requirements \u2014 CALGreen Tier",
+          "source": "Residential CALGreen Mandatory Plus Tier 2 \u2014 ALWAYS checked for new detached ADU and new SFR per master-adu-checklist-2026 requirement",
+          "notes": "This is deterministic: new detached ADU always = Tier 2. No human input needed."
+        }
+      ],
+      "human_required": [
+        {
+          "field_name": "special_inspection_agency_name",
+          "label": "Special Inspection Agency Name (Green Building)",
+          "type": "text",
+          "hint": "Can be the same agency as your structural special inspector, or a separate green building inspector. Must be qualified for green building inspections.",
+          "who_answers": "owner or contractor"
+        }
+      ]
+    },
+    "smoke_co_alarm_certification": {
+      "form_name": "Self-Certification for Smoke Detectors & Carbon Monoxide Alarms",
+      "pdf_source": "affidavit-sco-detectors_06242024_fillable.pdf",
+      "submitted_to": "Building inspector \u2014 presented at final inspection",
+      "when_required": "Any work exceeding $1,000 that requires a permit. Applies to all ADU projects.",
+      "notes": "Extremely simple form. Certifies that smoke and CO alarms are installed per code. Nearly 100% AI-fillable \u2014 only requires a wet signature from licensed contractor or property owner.",
+      "requirements_summary": {
+        "smoke_alarms": [
+          "In each sleeping room",
+          "Outside sleeping area in immediate vicinity",
+          "On each level"
+        ],
+        "co_alarms": [
+          "Outside each separate sleeping area",
+          "On every occupiable level",
+          "In bedroom where fuel-burning appliance is located"
+        ],
+        "palo_alto_specific": "Smoke alarms must be photoelectric type (or equivalent). Replace every 10 years."
+      },
+      "ai_fillable": [
+        {
+          "field_name": "permit_number",
+          "label": "Permit Number",
+          "source": "permit_form_fills.accela_record_id"
+        },
+        {
+          "field_name": "property_address",
+          "label": "Property Address",
+          "source": "homeowner_project.address"
+        },
+        {
+          "field_name": "certifier_name",
+          "label": "Print Name",
+          "source": "profiles.full_name (contractor or homeowner \u2014 whoever signs)"
+        },
+        {
+          "field_name": "certifier_role",
+          "label": "I am the: Licensed Contractor / Property Owner",
+          "source": "If contractor signs \u2192 Licensed Contractor. If homeowner signs \u2192 Property Owner."
+        }
+      ],
+      "human_required": [
+        {
+          "field_name": "signature_and_date",
+          "label": "Signature and Date",
+          "type": "signature_required",
+          "hint": "Sign and date to certify that smoke alarms and CO alarms have been installed in every required location and tested. Signed by contractor or property owner.",
+          "who_answers": "contractor or homeowner (wet signature or e-signature)"
+        }
+      ]
+    },
+    "_phase5_implementation_notes": {
+      "model": "claude-sonnet-4-6 \u2014 used for all AI operations in Chosen",
+      "context_size": "This JSON is ~14k tokens. Full Phase 5 prompt including project data will be ~18-22k tokens. Well within 200k window. No quality degradation for structured JSON at this size.",
+      "fill_rates": {
+        "building_permit_application": "~65% AI-fillable",
+        "utility_service_application": "~40% AI-fillable (BTU/load fields need contractor specs)",
+        "fire_department_checklist": "~92% AI-fillable (1 field needs physical measurement)",
+        "sb407_plumbing_compliance": "~85% AI-fillable (post-1994 homes fully auto-exempt)",
+        "valuation_calculator": "~80% AI-fillable",
+        "special_inspection_agreement": "~40% AI-fillable (structural schedule needs engineer)",
+        "green_building_inspection_agreement": "~85% AI-fillable",
+        "smoke_co_alarm_certification": "~95% AI-fillable (just needs signature)"
+      },
+      "schema_gaps_for_shawnak": [
+        "profiles table needs business_address for contractors \u2014 required on Building Permit Application",
+        "homeowner_project needs adu_sqft field (structured) \u2014 avoids parsing ai_scope_summary for SF number",
+        "homeowner_project needs all_electric_build boolean \u2014 determines gas service on utility application"
+      ],
+      "product_decisions_needed": [
+        "Title 24 + CALGreen GB-1 sheet: upload-only vs AI-assist? Recommend upload-only for MVP.",
+        "Special Inspection Agency: does Chosen pre-populate the approved agency list from the form, or let user type freely?",
+        "Utility metering: surface the one-service-per-lot + dual-meter-panel rule during homeowner intake?",
+        "SB-407 for pre-1994 homes: prompt homeowner to verify fixtures, or flag as contractor task?"
+      ],
+      "submission_sequence": [
+        "1. SIMULTANEOUSLY: Submit building permit package to Accela + utility service application to Utilities Dept",
+        "2. BEFORE PERMIT ISSUANCE: Submit Special Inspection Agreement + Green Building Agreement",
+        "3. AT FINAL INSPECTION: Submit SB-407 (signed) + Smoke/CO Certification (signed)",
+        "4. AFTER ACCELA ASSIGNS PERMIT NUMBER: Fill permit_number field on utility application and all inspection forms"
+      ]
+    },
+    "accela_pre_application_step3": {
+      "form_name": "Accela Building Permit Pre-Application \u2014 Step 3: Application Details / Scope of Work",
+      "source": "Live Accela portal walkthrough \u2014 aca-prod.accela.com/PALOALTO",
+      "date_observed": "2026-03-31",
+      "notes": "IMPORTANT: Property or Building Type should be Residential ADU for all ADU projects \u2014 this is a specific dropdown option. Water Heater and HVAC Equipment each have up to 3 type slots. Electrification fields (PV, EVCS, ESS) each expand to show a capacity field (kW or amp) when set to Yes.",
+      "ai_fillable": [
+        {
+          "field_name": "detailed_description",
+          "label": "Detailed Description (required)",
+          "source": "homeowner_project.ai_scope_summary",
+          "example": "Construction of new detached ADU, approximately 850 SF, single-story, with full kitchen, one bathroom, and mini-split HVAC. New electrical, plumbing, and mechanical systems."
+        },
+        {
+          "field_name": "type_of_work_new_residential_structure",
+          "label": "Types of Work \u2014 New Residential Structure (checkbox)",
+          "source": "checked for adu_detached and new_construction",
+          "notes": "This is the correct checkbox for a detached ADU. NOT Residential Addition."
+        },
+        {
+          "field_name": "type_of_work_residential_addition",
+          "label": "Types of Work \u2014 Residential Addition (checkbox)",
+          "source": "checked for adu_attached, jadu, addition"
+        },
+        {
+          "field_name": "type_of_work_residential_remodel",
+          "label": "Types of Work \u2014 Residential Remodel (checkbox)",
+          "source": "checked for remodel"
+        },
+        {
+          "field_name": "type_of_work_mech_elec_plumb_only",
+          "label": "Types of Work \u2014 Mech/Elec/Plumb Only (checkbox)",
+          "source": "checked if project_type is sub-permit only"
+        },
+        {
+          "field_name": "given_valuation",
+          "label": "General Information \u2014 Given Valuation (required)",
+          "source": "homeowner_project.ai_cost_estimate_low",
+          "notes": "Construction cost in dollars. Maps to same field as valuation calculator."
+        },
+        {
+          "field_name": "property_or_building_type",
+          "label": "General Information \u2014 Property or Building Type (required, dropdown)",
+          "source": "homeowner_project.project_type mapped: adu_detached \u2192 Residential ADU; adu_attached \u2192 Residential ADU; jadu \u2192 Residential ADU; addition \u2192 Residential Single-Family; remodel \u2192 Residential Single-Family",
+          "notes": "Use Residential ADU for all ADU project types. Use Residential Single-Family for additions and remodels.",
+          "dropdown_options": [
+            "Commercial/Retail",
+            "Industrial/Office Research & Development",
+            "Mixed Use",
+            "Residential ADU",
+            "Residential Duplex",
+            "Residential Multi-Family",
+            "Residential Single-Family"
+          ]
+        },
+        {
+          "field_name": "new_structure_conditioned_sf",
+          "label": "General Information \u2014 New Structure (Conditioned) Square Footage (required)",
+          "source": "ADU square footage from scope \u2014 the heated/cooled living area",
+          "notes": "KEY DIFFERENCE FROM PDF: Accela splits SF into conditioned vs unconditioned"
+        },
+        {
+          "field_name": "new_structure_unconditioned_sf",
+          "label": "General Information \u2014 New Structure (Unconditioned) Square Footage (required)",
+          "source": "0 for typical ADU unless it includes unheated storage/garage space"
+        },
+        {
+          "field_name": "addition_conditioned_sf",
+          "label": "General Information \u2014 Addition (Conditioned) Square Footage (required)",
+          "source": "addition SF from scope",
+          "applies_to": [
+            "addition",
+            "adu_attached"
+          ]
+        },
+        {
+          "field_name": "addition_unconditioned_sf",
+          "label": "General Information \u2014 Addition (Unconditioned) Square Footage (required)",
+          "source": "0 for typical addition unless it includes garage/storage"
+        },
+        {
+          "field_name": "area_of_remodel_conditioned_sf",
+          "label": "General Information \u2014 Area of Remodel (Conditioned) SF (required)",
+          "source": "remodel SF from scope",
+          "applies_to": [
+            "remodel"
+          ]
+        },
+        {
+          "field_name": "area_of_remodel_unconditioned_sf",
+          "label": "General Information \u2014 Area of Remodel (Unconditioned) SF (required)",
+          "source": "0 for typical remodel"
+        },
+        {
+          "field_name": "new_below_grade_conditioned_sf",
+          "label": "General Information \u2014 New Below Grade (Conditioned) SF (required)",
+          "source": "0 for typical ADU \u2014 only if adding basement"
+        },
+        {
+          "field_name": "new_below_grade_unconditioned_sf",
+          "label": "General Information \u2014 New Below Grade (Unconditioned) SF (required)",
+          "source": "0 for typical ADU"
+        },
+        {
+          "field_name": "demo_conditioned_sf",
+          "label": "General Information \u2014 Demo (Conditioned) SF (required)",
+          "source": "0 for new ADU \u2014 only if demolishing existing structure"
+        },
+        {
+          "field_name": "demo_unconditioned_sf",
+          "label": "General Information \u2014 Demo (Unconditioned) SF (required)",
+          "source": "0 for typical ADU"
+        },
+        {
+          "field_name": "electrical_service_upgrade",
+          "label": "Electrical Work \u2014 Service Upgrade (required, Yes/No)",
+          "source": "derived from scope \u2014 true if panel upgrade mentioned",
+          "notes": "Often Yes for ADU to handle additional electrical load"
+        },
+        {
+          "field_name": "plumbing_water_gas_meter_relocation",
+          "label": "Plumbing Work \u2014 Water/Gas Meter Relocation or Upgrade (required, Yes/No)",
+          "source": "homeowner_project \u2014 default No for typical ADU"
+        },
+        {
+          "field_name": "plumbing_water_heater_replacement",
+          "label": "Plumbing Work \u2014 Water Heater Replacement (required, Yes/No)",
+          "source": "default No \u2014 ADU gets its own new water heater, main house WH not replaced"
+        },
+        {
+          "field_name": "plumbing_water_sewer_replacement",
+          "label": "Plumbing Work \u2014 Water/Sewer Replacement (required, Yes/No)",
+          "source": "default No unless scope specifies"
+        },
+        {
+          "field_name": "plumbing_new_gas_appliances",
+          "label": "Plumbing Work \u2014 New Gas Appliances (required, Yes/No)",
+          "source": "true unless all-electric build"
+        },
+        {
+          "field_name": "plumbing_gas_leak_repair",
+          "label": "Plumbing Work \u2014 Gas Leak Repair (required, Yes/No)",
+          "source": "false for new construction"
+        },
+        {
+          "field_name": "mechanical_new_replace_hvac",
+          "label": "Mechanical Work \u2014 New/Replace HVAC Equipment (required, Yes/No)",
+          "source": "true for all new ADUs with conditioned space"
+        },
+        {
+          "field_name": "mechanical_hvac_roof_top",
+          "label": "Mechanical Work \u2014 HVAC Roof Top (required, Yes/No)",
+          "source": "false for typical mini-split ADU"
+        },
+        {
+          "field_name": "electrification_photovoltaic_panels",
+          "label": "Electrification Information \u2014 Photovoltaic Panels (required, Yes/No)",
+          "source": "infer from scope \u2014 default No unless solar mentioned"
+        },
+        {
+          "field_name": "electrification_ev_charging_station",
+          "label": "Electrification Information \u2014 Electric Vehicle Charging Station (EVCS) (required, Yes/No)",
+          "source": "infer from scope \u2014 default No unless EVCS mentioned"
+        },
+        {
+          "field_name": "electrification_energy_storage_system",
+          "label": "Electrification Information \u2014 Energy Storage System (ESS) (required, Yes/No)",
+          "source": "infer from scope \u2014 default No unless battery storage mentioned"
+        },
+        {
+          "field_name": "plumbing_trenchless",
+          "label": "Plumbing Work \u2014 Trenchless (Yes/No, conditional)",
+          "source": "false for typical ADU; true only if scope specifies trenchless sewer method",
+          "conditional_on": "water_sewer_replacement === true"
+        },
+        {
+          "field_name": "mechanical_heating_cooling_equipment_primary",
+          "label": "Mechanical Work \u2014 Heating or Cooling Equipment (dropdown, primary)",
+          "source": "infer from scope: mini-split ADU \u2192 Heat Pump Mechanical Equipment (including mini-splits); gas furnace \u2192 Gas Furnace",
+          "dropdown_options": [
+            "A/C (non-heat pump)",
+            "Air Handler",
+            "Boiler",
+            "Gas Furnace",
+            "Heat Pump Mechanical Equipment (including mini-splits)",
+            "Other",
+            "Radiant Heating - Electric",
+            "Radiant Heating - Gas"
+          ],
+          "notes": "Most new ADUs use mini-splits = Heat Pump Mechanical Equipment. Accela allows up to 3 equipment types."
+        },
+        {
+          "field_name": "electrification_pv_system_kilowatts",
+          "label": "Electrification \u2014 PV System kilowatts (kW, conditional)",
+          "source": "from scope if solar is included; default blank",
+          "conditional_on": "electrification_photovoltaic_panels === true"
+        },
+        {
+          "field_name": "electrification_evcs_system_amperage",
+          "label": "Electrification \u2014 EVCS System amperage (amp, conditional)",
+          "source": "from scope if EV charger included; Level 2 = 40 amp typical",
+          "conditional_on": "electrification_ev_charging_station === true"
+        },
+        {
+          "field_name": "electrification_ess_system_kilowatts",
+          "label": "Electrification \u2014 ESS System kilowatts (kW, conditional)",
+          "source": "from scope if battery storage included; default blank",
+          "conditional_on": "electrification_energy_storage_system === true"
+        }
+      ],
+      "human_required": [
+        {
+          "field_name": "original_building_permit_number",
+          "label": "General Information \u2014 Original Building Permit Number (required, e.g. 24BLD-12345)",
+          "type": "text",
+          "hint": "The existing building permit number for the main house. Find this on your property records or by searching Palo Alto Permit View. Leave blank if unknown \u2014 city may accept blank for new ADU.",
+          "who_answers": "homeowner"
+        },
+        {
+          "field_name": "electrical_total_amps",
+          "label": "Electrical Work \u2014 Total Amps (required)",
+          "type": "number",
+          "hint": "Total amperage of the electrical service after upgrade. Ask your electrician. Common: 200A (no upgrade) or 400A (upgraded for ADU).",
+          "who_answers": "electrician"
+        },
+        {
+          "field_name": "electrical_panel_relocated_10ft",
+          "label": "Electrical Work \u2014 Service Panel Relocated More than 10 feet (required, Yes/No)",
+          "type": "boolean",
+          "hint": "Will the main electrical panel be physically moved more than 10 feet from its current location? Ask your electrician.",
+          "who_answers": "electrician"
+        },
+        {
+          "field_name": "mechanical_linear_sf_ducts",
+          "label": "Mechanical Work \u2014 Linear Square Footage of Ducts (required)",
+          "type": "number",
+          "hint": "Total linear square footage of ductwork for the ADU. For a ductless mini-split system, enter 0. Ask your HVAC contractor.",
+          "who_answers": "HVAC contractor",
+          "notes": "Accela uses linear SF of ducts, NOT number of ducts as on the PDF form \u2014 different metric"
+        },
+        {
+          "field_name": "plumbing_water_heater_type",
+          "label": "Plumbing Work \u2014 Water Heater Type (dropdown, up to 3)",
+          "type": "select",
+          "options": [
+            "Boiler",
+            "Gas Tank",
+            "Heat Pump Water Heater",
+            "Other Water Heater",
+            "Tankless Electric",
+            "Tankless Gas"
+          ],
+          "hint": "What type of water heater will the ADU have? Most common: Tankless Gas or Heat Pump Water Heater. Ask your plumber.",
+          "who_answers": "contractor or homeowner (equipment selection)",
+          "conditional_on": "plumbing_water_heater_replacement === true"
+        },
+        {
+          "field_name": "plumbing_water_heater_existing_fuel",
+          "label": "Plumbing Work \u2014 Water Heater Existing Equipment/Fuel",
+          "type": "text",
+          "hint": "What fuel does the existing main house water heater use? (e.g. Natural Gas, Electric)",
+          "who_answers": "homeowner",
+          "conditional_on": "plumbing_water_heater_replacement === true"
+        },
+        {
+          "field_name": "mechanical_existing_equipment_fuel",
+          "label": "Mechanical Work \u2014 Existing Equipment/Fuel",
+          "type": "text",
+          "hint": "What fuel does the existing heating/cooling system use? (e.g. Natural Gas, Electric)",
+          "who_answers": "homeowner or HVAC contractor"
+        },
+        {
+          "field_name": "mechanical_heating_cooling_equipment_2",
+          "label": "Mechanical Work \u2014 Heating or Cooling Equipment 2 (if multiple systems)",
+          "type": "select",
+          "options": [
+            "A/C (non-heat pump)",
+            "Air Handler",
+            "Boiler",
+            "Gas Furnace",
+            "Heat Pump Mechanical Equipment (including mini-splits)",
+            "Other",
+            "Radiant Heating - Electric",
+            "Radiant Heating - Gas"
+          ],
+          "hint": "Only if the ADU has a second separate HVAC system. Usually blank.",
+          "who_answers": "HVAC contractor"
+        }
+      ],
+      "leave_blank_for_adu": [
+        "Commercial Information (Commercial Tenant Name, Is new tenant, Prior Tenant Name) \u2014 residential projects only",
+        "Reroof Information (Number of Squares, Fire Classification, Roofing Material, etc.) \u2014 not applicable for new ADU",
+        "Demo SF fields \u2014 0 for new ADU construction"
+      ],
+      "dropdown_options_discovered": {
+        "property_or_building_type": [
+          "Commercial/Retail",
+          "Industrial/Office Research & Development",
+          "Mixed Use",
+          "Residential ADU",
+          "Residential Duplex",
+          "Residential Multi-Family",
+          "Residential Single-Family"
+        ],
+        "water_heater_type": [
+          "Boiler",
+          "Gas Tank",
+          "Heat Pump Water Heater",
+          "Other Water Heater",
+          "Tankless Electric",
+          "Tankless Gas"
+        ],
+        "heating_or_cooling_equipment": [
+          "A/C (non-heat pump)",
+          "Air Handler",
+          "Boiler",
+          "Gas Furnace",
+          "Heat Pump Mechanical Equipment (including mini-splits)",
+          "Other",
+          "Radiant Heating - Electric",
+          "Radiant Heating - Gas"
+        ],
+        "fire_classification": [
+          "A",
+          "B",
+          "C",
+          "None"
+        ]
+      }
+    },
+    "accela_pre_application_step4": {
+      "form_name": "Accela Building Permit Pre-Application \u2014 Step 4: Licensed Professional",
+      "source": "Live Accela portal walkthrough \u2014 aca-prod.accela.com/PALOALTO",
+      "notes": "Optional at pre-application stage. Required before permit issuance. Entered via popup modal when clicking Add New.",
+      "ai_fillable": [
+        {
+          "field_name": "lp_role",
+          "label": "Role (dropdown)",
+          "source": "CONTRACTOR for all Chosen projects where contractor is assigned",
+          "dropdown_options": [
+            "CONTRACTOR",
+            "OWNER-BUILDER"
+          ]
+        },
+        {
+          "field_name": "lp_state_license_number",
+          "label": "State License Number",
+          "source": "profiles.license_number (contractor)",
+          "notes": "Form says leave blank if unknown"
+        },
+        {
+          "field_name": "lp_name_of_business",
+          "label": "Name of Business",
+          "source": "profiles.company_name (contractor)"
+        },
+        {
+          "field_name": "lp_first_name",
+          "label": "First Name",
+          "source": "profiles.full_name split \u2014 first name"
+        },
+        {
+          "field_name": "lp_last_name",
+          "label": "Last Name (required)",
+          "source": "profiles.full_name split \u2014 last name"
+        },
+        {
+          "field_name": "lp_address",
+          "label": "Address",
+          "source": "contractor profile business_address (field needs to be added to profiles table)"
+        },
+        {
+          "field_name": "lp_city",
+          "label": "City",
+          "source": "contractor profile city"
+        },
+        {
+          "field_name": "lp_state",
+          "label": "State",
+          "source": "profiles.license_state (contractor)"
+        },
+        {
+          "field_name": "lp_zip",
+          "label": "Zip",
+          "source": "contractor profile zip"
+        },
+        {
+          "field_name": "lp_phone",
+          "label": "Phone",
+          "source": "profiles.phone (contractor)"
+        },
+        {
+          "field_name": "lp_email",
+          "label": "E-mail (required)",
+          "source": "auth.users.email (contractor)"
+        }
+      ],
+      "human_required": [
+        {
+          "field_name": "lp_mobile_phone",
+          "label": "Mobile Phone",
+          "type": "text",
+          "hint": "Contractor mobile phone number. Optional but useful for city contact.",
+          "who_answers": "contractor"
+        }
+      ]
+    },
+    "accela_pre_application_step5": {
+      "form_name": "Accela Building Permit Pre-Application \u2014 Step 5: Documents",
+      "source": "Live Accela portal walkthrough",
+      "notes": "FREE-FORM upload at pre-application stage. No specific required documents listed. Just upload plans or supporting docs in PDF format. The full document checklist (architectural plans, structural plans, Title 24, etc.) is required at the actual building permit submission, NOT at pre-application.",
+      "upload_requirements": {
+        "format": "PDF only",
+        "max_file_size": "400 MB",
+        "disallowed_extensions": "ade;adp;bat;chm;cmd;com;cpl;exe;hta;htm;html;ins;isp;jar;js;jse;lib;lnk;mde;mht;mhtml;msc;msp;mst;php;pif;scr;sct;shb;sys;vb;vbe;vbs;vxd;wsc;wsf;wsh",
+        "what_to_upload_at_preapp": "Preliminary plans, sketches, or any supporting documents that help city staff understand the project scope. Not required to be complete."
+      },
+      "phase5_implication": "Chosen should provide a simple drag-and-drop upload area at pre-application stage. Label it: Upload preliminary plans or project description (PDF, optional at this stage)."
+    },
+    "accela_pre_application_step6_7": {
+      "form_name": "Accela Building Permit Pre-Application \u2014 Step 6: Review + Step 7: Pre-Application Submittal",
+      "source": "Live Accela portal walkthrough",
+      "notes": "Step 6 shows a full review of all entered data with Edit buttons for each section. Step 7 is the final submission with a certification checkbox.",
+      "parcel_auto_population_confirmed": "When address is searched in Step 1, Accela auto-populates: Parcel Number, Year Built, Zoning. These do NOT need to be manually entered \u2014 confirmed from review screen showing Parcel 120-26-064, Year Built 1971, Zoning CD-C(GF)(P) auto-filled.",
+      "ai_fillable": [
+        {
+          "field_name": "certification_date",
+          "label": "Certification Date",
+          "source": "today() \u2014 auto-populated at time of submission"
+        }
+      ],
+      "human_required": [
+        {
+          "field_name": "certification_checkbox",
+          "label": "Certification Agreement Checkbox (required to submit)",
+          "type": "checkbox_agreement",
+          "certification_text": "I certify that I have read and understand the instructions that accompany this application and that the statements made as part of this application are true, complete, and correct and that no material information has been omitted. By checking the box below, I understand and agree that I am electronically signing and filing this application.",
+          "hint": "The homeowner or applicant must check this box to electronically sign and submit the pre-application.",
+          "who_answers": "homeowner (must be the one to agree and submit)",
+          "phase6_note": "This is the final submit action. Chosen should show this certification text to the homeowner and require explicit checkbox confirmation before calling the Accela submit API."
+        }
+      ],
+      "appointment_option": "Step 6 shows a link to schedule an in-person appointment to review the pre-application with city staff at (650) 329-2441. Chosen could surface this as an optional CTA for homeowners who want guidance."
     }
   }
