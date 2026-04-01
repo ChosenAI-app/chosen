@@ -81,7 +81,7 @@ export function ContractorScopePoller({ projectId }: { projectId: string }) {
         <div className="size-64 rounded-full bg-primary/5 blur-3xl" />
       </div>
 
-      <div className="relative mb-10 flex items-center justify-center" style={{ marginTop: "-20px" }}>
+      <div className="relative mb-16 mt-12 flex items-center justify-center">
         <div className="absolute size-40 rounded-full border border-primary/10" style={{ animation: "cSpin 12s linear infinite" }} />
         <div className="absolute size-28 rounded-full border border-primary/20" style={{ animation: "cSpin 8s linear infinite reverse" }} />
         <div className="absolute size-20 animate-pulse rounded-full border border-primary/30" />

@@ -15,7 +15,8 @@
       "Bash(mkdir -p /Users/shawnakshivakumar/Desktop/chosen/src/app/marketplace/profile/[userId])",
       "Bash(mkdir -p /Users/shawnakshivakumar/Desktop/chosen/src/app/homeowner/projects/[id]/bids)",
       "Bash(grep -n \"eq.*user_id\" /Users/shawnakshivakumar/Desktop/chosen/src/app/\\\\\\(dashboard\\\\\\)/projects/[id]/documents/page.tsx /Users/shawnakshivakumar/Desktop/chosen/src/app/\\\\\\(dashboard\\\\\\)/projects/[id]/inspections/page.tsx)",
-      "Bash(grep -n \"Button\" /Users/shawnakshivakumar/Desktop/chosen/src/app/\\\\\\(dashboard\\\\\\)/projects/[id]/page.tsx)"
+      "Bash(grep -n \"Button\" /Users/shawnakshivakumar/Desktop/chosen/src/app/\\\\\\(dashboard\\\\\\)/projects/[id]/page.tsx)",
+      "Bash(grep -n \"Continue to Dashboard\\\\|View Project Dashboard\\\\|/homeowner/projects/\" /Users/shawnakshivakumar/Desktop/chosen/src/app/homeowner/projects/[id]/explore/page.tsx)"
     ]
   },
   "enableAllProjectMcpServers": true,

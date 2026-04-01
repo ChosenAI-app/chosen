@@ -300,3 +300,83 @@ export async function removeTeamMember(
   revalidatePath("/projects/[id]", "page")
   return { error: null }
 }
+
+export async function inviteHomeownerTeamMember(
+  formData: FormData
+): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+
+  const email = (formData.get("email") as string)?.toLowerCase().trim()
+  const role = formData.get("role") as string
+  const projectId = formData.get("projectId") as string
+
+  if (!email || !role || !projectId)
+    return { error: "Missing required fields" }
+
+  const { data: project } = await supabase
+    .from("homeowner_projects")
+    .select("id, address, project_type")
+    .eq("id", projectId)
+    .eq("homeowner_id", user.id)
+    .maybeSingle()
+
+  if (!project) return { error: "Project not found" }
+
+  const { data: inviterProfile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  const inviterName = inviterProfile?.full_name ?? "A homeowner"
+  const projectAddress =
+    project.address?.replace(/, USA$/, "") ?? "a project"
+  const projectType =
+    project.project_type?.replace(/_/g, " ") ?? "project"
+
+  const roleLabelMap: Record<string, string> = {
+    contractor: "General Contractor",
+    architect: "Architect",
+    engineer: "Structural Engineer",
+    inspector: "Inspector",
+    client: "Co-Owner",
+  }
+  const roleLabel = roleLabelMap[role] ?? role
+
+  const adminClient = createAdminClient()
+  let isExistingUser = false
+  try {
+    const {
+      data: { users },
+    } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 })
+    isExistingUser = users.some((u) => u.email?.toLowerCase() === email)
+  } catch {
+    // proceed as new user
+  }
+
+  try {
+    const resendMod = await import("resend")
+    const resend = new resendMod.Resend(process.env.RESEND_API_KEY)
+
+    const emailText = isExistingUser
+      ? `Hi,\n\n${inviterName} has invited you to work on a ${projectType} project at ${projectAddress} as ${roleLabel}.\n\nLog in to Chosen to review:\nhttps://chosenai.com/marketplace\n\n— The Chosen Team`
+      : `Hi,\n\n${inviterName} is looking for a ${roleLabel} for a ${projectType} project at ${projectAddress} in Palo Alto.\n\nCreate your free professional account:\nhttps://chosenai.com/signup\n\nSign up with ${email} to connect.\n\n— The Chosen Team`
+
+    await resend.emails.send({
+      from: "Chosen <notifications@chosenai.com>",
+      to: email,
+      subject: `${inviterName} wants you for their ${projectType} project`,
+      text: emailText,
+    })
+    console.log("[homeowner invite] email sent to:", email)
+  } catch (err) {
+    console.error("[homeowner invite] email failed:", err)
+    return { error: "Failed to send invitation email" }
+  }
+
+  return { error: null }
+}
