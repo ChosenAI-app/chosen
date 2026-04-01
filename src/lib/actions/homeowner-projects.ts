@@ -19,6 +19,99 @@ const VALID_PROJECT_TYPES = [
   "conversion",
 ] as const
 
+// Santa Clara County public ArcGIS parcel API — free, no key required
+async function fetchSCCParcelData(lat: number, lng: number) {
+  try {
+    const params = new URLSearchParams({
+      geometry: JSON.stringify({
+        x: lng,
+        y: lat,
+        spatialReference: { wkid: 4326 },
+      }),
+      geometryType: "esriGeometryPoint",
+      spatialRel: "esriSpatialRelIntersects",
+      outFields: "*",
+      returnGeometry: "true",
+      f: "json",
+    })
+
+    const url = `https://gis.sccgov.org/arcgis/rest/services/Planning/Parcels/MapServer/0/query?${params}`
+    console.log("[SCC ArcGIS] Querying parcel at:", lat, lng)
+
+    const res = await fetch(url, {
+      headers: { "User-Agent": "ChosenAI/1.0 (chosenai.com)" },
+      signal: AbortSignal.timeout(8000),
+    })
+
+    if (!res.ok) {
+      console.error("[SCC ArcGIS] HTTP error:", res.status)
+      return null
+    }
+
+    const json = await res.json()
+    console.log(
+      "[SCC ArcGIS] Response features:",
+      json.features?.length ?? 0
+    )
+
+    const feature = json.features?.[0]
+    if (!feature) {
+      console.log("[SCC ArcGIS] No parcel found at coordinates")
+      return null
+    }
+
+    const attrs = feature.attributes
+    console.log("[SCC ArcGIS] Attributes:", JSON.stringify(attrs, null, 2))
+
+    const rings = feature.geometry?.rings?.[0]
+
+    // Convert ArcGIS ring coords to GeoJSON Polygon
+    let parcelGeometry = null
+    if (rings && rings.length > 0) {
+      parcelGeometry = {
+        type: "Polygon",
+        coordinates: [rings.map(([x, y]: number[]) => [x, y])],
+      }
+    }
+
+    // Try multiple possible field names — SCC ArcGIS field names vary by layer
+    const lotAcres = parseFloat(
+      attrs.LotSizeAcres ?? attrs.LotAcres ?? attrs.LOTACRES ?? attrs.LOT_ACRES ?? "0"
+    )
+    const lotSqft =
+      attrs.LotSizeSqFt ?? attrs.LOTSIZESQFT ?? attrs.LOT_SIZE ?? attrs.LotSize
+    const yrBuilt =
+      attrs.YearBuilt ?? attrs.YEARBUILT ?? attrs.YEAR_BUILT ?? attrs.YrBuilt
+    const totalSqft =
+      attrs.TotalBldgSqFt ?? attrs.TotalSqFt ?? attrs.ImprovSqFt ??
+      attrs.TOTALSQFT ?? attrs.BldgSqFt1stFlr
+    const zoningCode =
+      attrs.ZoningCode ?? attrs.ZONINGCODE ?? attrs.Zoning ?? attrs.ZONING
+    const landUse =
+      attrs.LandUseCode ?? attrs.LandUseDescription ?? attrs.LANDUSE ??
+      attrs.LandUse ?? attrs.UseCode
+    const apn =
+      attrs.APN ?? attrs.APN_DASH ?? attrs.PARCELID ?? attrs.ParcelNumber
+
+    return {
+      apn: apn ?? null,
+      lotSizeSqft: lotSqft
+        ? Math.round(Number(lotSqft))
+        : lotAcres > 0
+          ? Math.round(lotAcres * 43560)
+          : null,
+      yearBuilt: yrBuilt ? parseInt(String(yrBuilt)) : null,
+      existingSqft: totalSqft ? parseInt(String(totalSqft)) : null,
+      zoning: zoningCode ?? null,
+      zoningDescription: landUse ?? null,
+      parcelGeometry,
+    }
+  } catch (err) {
+    console.error("[SCC ArcGIS] Error:", err)
+    return null
+  }
+}
+
 export async function createHomeownerProject(formData: FormData): Promise<{
   data: { id: string } | null
   error: string | null
@@ -72,7 +165,7 @@ export async function createHomeownerProject(formData: FormData): Promise<{
     jurisdiction = data
   }
 
-  // Fetch parcel data from Regrid
+  // Get parcel data from Santa Clara County ArcGIS using Google Places lat/lng
   let regridParcelId: string | null = null
   let lotSizeSqft: number | null = null
   let existingSqft: number | null = null
@@ -80,92 +173,35 @@ export async function createHomeownerProject(formData: FormData): Promise<{
   let zoning: string | null = null
   let zoningDescription: string | null = null
   let parcelGeometry: unknown | null = null
-  let mapLat: number | null = null
-  let mapLng: number | null = null
+  let mapLat: number | null = formLat ? parseFloat(formLat) : null
+  let mapLng: number | null = formLng ? parseFloat(formLng) : null
 
-  // Clean the address for Regrid — remove country suffix
-  const regridAddress = address
-    .replace(/, USA$/, "")
-    .replace(/, United States$/, "")
-    .trim()
+  if (isNaN(mapLat as number)) mapLat = null
+  if (isNaN(mapLng as number)) mapLng = null
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let feature: any = null
-
-  try {
-    console.log("[Regrid] Querying:", regridAddress)
-    const regridUrl = `https://app.regrid.com/api/v2/parcels/typeahead?query=${encodeURIComponent(regridAddress)}&token=${process.env.REGRID_API_KEY}`
-    const regridRes = await fetch(regridUrl)
-    if (regridRes.ok) {
-      const regridJson = await regridRes.json()
-      console.log("[Regrid] Raw response:", JSON.stringify(regridJson, null, 2))
-      feature = regridJson.parcel_centroids?.features?.[0] ?? null
-      if (feature) {
-        const props = feature.properties
-        regridParcelId = props?.parcelnumb ?? null
-        const acres = parseFloat(props?.ll_gisacre)
-        lotSizeSqft = !isNaN(acres) && acres > 0 ? Math.round(acres * 43560) : null
-        existingSqft = props?.sqft ? parseInt(props.sqft) : null
-        yearBuilt = props?.yearbuilt ? parseInt(props.yearbuilt) : null
-        zoning = props?.zoning ?? null
-        zoningDescription = props?.zoning_description ?? null
-        parcelGeometry = feature.geometry ?? null
-        mapLat = props?.lat ? parseFloat(props.lat) : null
-        mapLng = props?.lon ? parseFloat(props.lon) : null
-      } else {
-        console.log("[Regrid] No parcels returned for typeahead")
-      }
-    } else {
-      console.error("[Regrid] HTTP error:", regridRes.status, await regridRes.text())
+  if (mapLat && mapLng) {
+    const parcelData = await fetchSCCParcelData(mapLat, mapLng)
+    if (parcelData) {
+      regridParcelId = parcelData.apn
+      lotSizeSqft = parcelData.lotSizeSqft
+      existingSqft = parcelData.existingSqft
+      yearBuilt = parcelData.yearBuilt
+      zoning = parcelData.zoning
+      zoningDescription = parcelData.zoningDescription
+      parcelGeometry = parcelData.parcelGeometry
+      console.log("[SCC ArcGIS] Parcel data:", {
+        apn: regridParcelId,
+        lotSizeSqft,
+        yearBuilt,
+        zoning,
+        existingSqft,
+      })
     }
-  } catch (err) {
-    console.error("[Regrid] Fetch failed:", err)
+  } else {
+    console.log("[SCC ArcGIS] No coordinates from Places — skipping parcel lookup")
   }
 
-  // Fallback: try Regrid query endpoint if typeahead returns nothing
-  if (!feature && regridAddress) {
-    try {
-      const streetPart = regridAddress.split(",")[0]
-      const queryUrl = `https://app.regrid.com/api/v2/parcels/query?fields[address][ilike]=${encodeURIComponent(streetPart)}&fields[szip][eq]=${normalizedZip || "94301"}&token=${process.env.REGRID_API_KEY}&limit=1`
-      console.log("[Regrid] Trying query fallback:", queryUrl)
-      const queryRes = await fetch(queryUrl)
-      if (queryRes.ok) {
-        const queryJson = await queryRes.json()
-        console.log("[Regrid] Query fallback response:", JSON.stringify(queryJson, null, 2))
-        const queryFeature =
-          queryJson.results?.features?.[0] ??
-          queryJson.parcels?.features?.[0]
-        if (queryFeature) {
-          const props = queryFeature.properties || queryFeature.fields
-          regridParcelId = props?.parcelnumb ?? null
-          const acres = parseFloat(props?.ll_gisacre)
-          lotSizeSqft = !isNaN(acres) && acres > 0 ? Math.round(acres * 43560) : null
-          existingSqft = props?.sqft ? parseInt(props.sqft) : null
-          yearBuilt = props?.yearbuilt ? parseInt(props.yearbuilt) : null
-          zoning = props?.zoning ?? null
-          zoningDescription = props?.zoning_description ?? null
-          parcelGeometry = queryFeature.geometry ?? null
-          mapLat = props?.lat ? parseFloat(props.lat) : null
-          mapLng = props?.lon ? parseFloat(props.lon) : null
-          console.log("[Regrid] Fallback found parcel:", { lotSizeSqft, zoning, mapLat, mapLng })
-        }
-      }
-    } catch (err) {
-      console.error("[Regrid] Query fallback failed:", err)
-    }
-  }
-
-  // Fallback: use Google Places lat/lng if Regrid returned no coordinates
-  if (mapLat === null && formLat) {
-    mapLat = parseFloat(formLat)
-    if (isNaN(mapLat)) mapLat = null
-  }
-  if (mapLng === null && formLng) {
-    mapLng = parseFloat(formLng)
-    if (isNaN(mapLng)) mapLng = null
-  }
-
-  console.log("[coords] mapLat:", mapLat, "mapLng:", mapLng, "from places lat:", formLat, "lng:", formLng)
+  console.log("[coords] mapLat:", mapLat, "mapLng:", mapLng)
 
   // Insert homeowner project
   let projectId: string
