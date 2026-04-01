@@ -1,91 +1,168 @@
-"use client";
+"use client"
 
-import { useTransition, useState } from "react";
-import { createProject } from "@/lib/actions/projects";
-import { isPaloAltoZip, normalizeZip } from "@/lib/utils/jurisdiction";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useTransition, useState, useEffect, useRef } from "react"
+import { createProject } from "@/lib/actions/projects"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+
+declare global {
+  interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    google: any
+  }
+}
 
 const PROJECT_TYPES = [
   { value: "adu_detached", label: "Detached ADU" },
   { value: "adu_attached", label: "Attached ADU / JADU" },
   { value: "addition", label: "Residential Addition" },
   { value: "remodel", label: "Interior Remodel" },
-] as const;
+] as const
 
 export default function NewProjectPage() {
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const [step, setStep] = useState<1 | 2>(1);
+  const [error, setError] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
+  const [step, setStep] = useState<1 | 2>(1)
 
   const [step1Data, setStep1Data] = useState({
     address: "",
-    zip_code: "",
     project_type: "",
     scope_description: "",
-  });
+  })
 
   const [intakeAnswers, setIntakeAnswers] = useState({
-    fireWestOf280: false,
     fireSprinklersExist: false,
     hasEarthwork: false,
-  });
+  })
+
+  // Refs for Places data
+  const selectedAddressRef = useRef("")
+  const selectedZipRef = useRef("")
+  const selectedCityRef = useRef("")
+  const selectedLatRef = useRef("")
+  const selectedLngRef = useRef("")
+
+  // Google Places PlaceAutocompleteElement
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null
+    let attempts = 0
+    const MAX_ATTEMPTS = 100
+
+    function init(): boolean {
+      if (!window.google?.maps?.places?.PlaceAutocompleteElement) return false
+      const container = document.getElementById("contractor-place-container")
+      if (!container || container.children.length > 0) return true
+
+      const el = new window.google.maps.places.PlaceAutocompleteElement({
+        componentRestrictions: { country: "us" },
+        types: ["address"],
+      })
+      el.style.width = "100%"
+      container.appendChild(el)
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      async function handlePlace(event: any, name: string) {
+        console.log(`[Places] ${name} fired`)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let place: any
+        if (event.placePrediction) {
+          place = event.placePrediction.toPlace()
+        } else if (event.place) {
+          place = event.place
+        } else {
+          return
+        }
+        await place.fetchFields({
+          fields: ["formattedAddress", "location", "addressComponents"],
+        })
+        if (place.formattedAddress) {
+          setStep1Data((d) => ({ ...d, address: place.formattedAddress }))
+          selectedAddressRef.current = place.formattedAddress
+        }
+        if (place.location) {
+          selectedLatRef.current = place.location.lat().toString()
+          selectedLngRef.current = place.location.lng().toString()
+        }
+        if (place.addressComponents) {
+          for (const c of place.addressComponents) {
+            if (c.types?.includes("postal_code"))
+              selectedZipRef.current = c.longText
+            if (c.types?.includes("locality"))
+              selectedCityRef.current = c.longText
+          }
+        }
+      }
+
+      el.addEventListener("gmp-placeselect", (e: Event) =>
+        handlePlace(e, "gmp-placeselect")
+      )
+      el.addEventListener("gmp-select", (e: Event) =>
+        handlePlace(e, "gmp-select")
+      )
+      return true
+    }
+
+    if (init()) return
+    interval = setInterval(() => {
+      attempts++
+      if (init() || attempts >= MAX_ATTEMPTS) {
+        if (interval) clearInterval(interval)
+      }
+    }, 100)
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [])
 
   function handleNext() {
-    setError(null);
-
-    if (!step1Data.address.trim()) {
-      setError("Street address is required.");
-      return;
+    setError(null)
+    const addr = selectedAddressRef.current || step1Data.address.trim()
+    if (!addr) {
+      setError("Please select an address from the dropdown.")
+      return
     }
-    if (!step1Data.zip_code.trim()) {
-      setError("Zip code is required.");
-      return;
-    }
-    if (!isPaloAltoZip(normalizeZip(step1Data.zip_code))) {
+    if (selectedCityRef.current && selectedCityRef.current !== "Palo Alto") {
       setError(
-        "Chosen currently supports Palo Alto only (94301, 94303, 94304, 94306)."
-      );
-      return;
+        "Chosen currently serves Palo Alto only. Support for more cities coming soon."
+      )
+      return
     }
     if (!step1Data.project_type) {
-      setError("Please select a project type.");
-      return;
+      setError("Please select a project type.")
+      return
     }
-
-    setStep(2);
+    setStep(2)
   }
 
   function handleSubmit() {
-    setError(null);
-
+    setError(null)
     startTransition(async () => {
-      const fd = new FormData();
-      fd.append("address", step1Data.address);
-      fd.append("zip_code", step1Data.zip_code);
-      fd.append("project_type", step1Data.project_type);
-      fd.append("scope_description", step1Data.scope_description);
-      fd.append("fireWestOf280", intakeAnswers.fireWestOf280 ? "yes" : "no");
+      const fd = new FormData()
+      fd.append("address", selectedAddressRef.current || step1Data.address)
+      if (selectedZipRef.current) fd.append("zip_code", selectedZipRef.current)
+      fd.append("project_type", step1Data.project_type)
+      fd.append("scope_description", step1Data.scope_description)
       fd.append(
         "fireSprinklersExist",
         intakeAnswers.fireSprinklersExist ? "yes" : "no"
-      );
-      fd.append("hasEarthwork", intakeAnswers.hasEarthwork ? "yes" : "no");
+      )
+      fd.append("hasEarthwork", intakeAnswers.hasEarthwork ? "yes" : "no")
+      if (selectedLatRef.current) fd.append("lat", selectedLatRef.current)
+      if (selectedLngRef.current) fd.append("lng", selectedLngRef.current)
 
-      const result = await createProject(fd);
+      const result = await createProject(fd)
       if (result?.error) {
-        setError(result.error);
+        setError(result.error)
       }
-    });
+    })
   }
 
   return (
@@ -130,45 +207,13 @@ export default function NewProjectPage() {
           {step === 1 && (
             <div className="flex flex-col gap-5">
               <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="address"
-                  className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
-                >
+                <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Street address
                 </Label>
-                <Input
-                  id="address"
-                  type="text"
-                  placeholder="123 Main St"
-                  required
-                  value={step1Data.address}
-                  onChange={(e) =>
-                    setStep1Data((d) => ({ ...d, address: e.target.value }))
-                  }
+                <div
+                  id="contractor-place-container"
+                  className="[&>*]:w-full [&>*]:rounded-md [&>*]:border [&>*]:border-input [&>*]:bg-background [&>*]:px-3 [&>*]:py-2 [&>*]:text-sm [&>*]:text-foreground"
                 />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="zip_code"
-                  className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
-                >
-                  Zip code
-                </Label>
-                <Input
-                  id="zip_code"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="94301"
-                  required
-                  value={step1Data.zip_code}
-                  onChange={(e) =>
-                    setStep1Data((d) => ({ ...d, zip_code: e.target.value }))
-                  }
-                />
-                <p className="text-xs text-muted-foreground">
-                  Palo Alto only: 94301, 94303, 94304, 94306
-                </p>
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -195,17 +240,13 @@ export default function NewProjectPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label
-                  htmlFor="scope_description"
-                  className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
-                >
+                <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Scope description{" "}
                   <span className="normal-case tracking-normal text-muted-foreground">
                     (optional)
                   </span>
                 </Label>
                 <Textarea
-                  id="scope_description"
                   placeholder="Brief description of the project scope..."
                   value={step1Data.scope_description}
                   onChange={(e) =>
@@ -221,7 +262,7 @@ export default function NewProjectPage() {
 
               <Button
                 onClick={handleNext}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-150"
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 Next &rarr;
               </Button>
@@ -241,16 +282,16 @@ export default function NewProjectPage() {
               <div className="flex gap-3">
                 <Button
                   variant="ghost"
-                  className="text-muted-foreground hover:text-foreground transition-all duration-150"
+                  className="text-muted-foreground hover:text-foreground"
                   onClick={() => {
-                    setError(null);
-                    setStep(1);
+                    setError(null)
+                    setStep(1)
                   }}
                 >
                   &larr; Back
                 </Button>
                 <Button
-                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-150"
+                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
                   onClick={handleSubmit}
                   disabled={isPending}
                 >
@@ -262,7 +303,7 @@ export default function NewProjectPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 function YesNoToggle({
@@ -270,9 +311,9 @@ function YesNoToggle({
   value,
   onChange,
 }: {
-  label: string;
-  value: boolean;
-  onChange: (v: boolean) => void;
+  label: string
+  value: boolean
+  onChange: (v: boolean) => void
 }) {
   return (
     <div className="flex items-center justify-between gap-4 rounded-md border border-border bg-background p-4">
@@ -302,7 +343,7 @@ function YesNoToggle({
         </button>
       </div>
     </div>
-  );
+  )
 }
 
 function IntakeQuestions({
@@ -310,18 +351,13 @@ function IntakeQuestions({
   answers,
   onChange,
 }: {
-  projectType: string;
-  answers: { fireWestOf280: boolean; fireSprinklersExist: boolean; hasEarthwork: boolean };
-  onChange: (a: typeof answers) => void;
+  projectType: string
+  answers: { fireSprinklersExist: boolean; hasEarthwork: boolean }
+  onChange: (a: typeof answers) => void
 }) {
   if (projectType === "adu_detached") {
     return (
       <div className="flex flex-col gap-3">
-        <YesNoToggle
-          label="Is any part of the property west of Highway 280?"
-          value={answers.fireWestOf280}
-          onChange={(v) => onChange({ ...answers, fireWestOf280: v })}
-        />
         <YesNoToggle
           label="Does the main house have fire sprinklers?"
           value={answers.fireSprinklersExist}
@@ -333,7 +369,7 @@ function IntakeQuestions({
           onChange={(v) => onChange({ ...answers, hasEarthwork: v })}
         />
       </div>
-    );
+    )
   }
 
   if (projectType === "adu_attached") {
@@ -344,11 +380,8 @@ function IntakeQuestions({
           value={answers.hasEarthwork}
           onChange={(v) => onChange({ ...answers, hasEarthwork: v })}
         />
-        <p className="text-xs text-muted-foreground">
-          JADU Deed Restriction will be included automatically.
-        </p>
       </div>
-    );
+    )
   }
 
   if (projectType === "addition") {
@@ -359,18 +392,14 @@ function IntakeQuestions({
           value={answers.hasEarthwork}
           onChange={(v) => onChange({ ...answers, hasEarthwork: v })}
         />
-        <p className="text-xs text-muted-foreground">
-          School District Fee Certificate will be included automatically.
-        </p>
       </div>
-    );
+    )
   }
 
-  // remodel
   return (
     <p className="text-sm text-muted-foreground">
-      No additional permits required beyond Building and Electrical.
-      You&apos;re ready to create your project.
+      No additional permits required beyond Building and Electrical. You&apos;re
+      ready to create your project.
     </p>
-  );
+  )
 }

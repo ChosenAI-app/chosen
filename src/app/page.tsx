@@ -192,7 +192,7 @@ export default function HomePage() {
             CHOSEN
           </span>
           <Button asChild variant="ghost" size="sm">
-            <Link href="/login">
+            <Link href="/signup">
               I&apos;m a Contractor
               <ArrowRight className="ml-1 size-3" />
             </Link>

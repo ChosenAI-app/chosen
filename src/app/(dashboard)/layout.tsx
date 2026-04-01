@@ -21,9 +21,14 @@ export default async function DashboardLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name")
+    .select("full_name, user_type")
     .eq("id", user.id)
     .maybeSingle();
+
+  // Redirect homeowners to their dashboard
+  if (profile?.user_type === "homeowner") {
+    redirect("/homeowner/dashboard");
+  }
 
   const firstName =
     profile?.full_name?.split(" ")[0] ??
@@ -43,8 +48,14 @@ export default async function DashboardLayout({
             CHOSEN
           </Link>
           <div className="flex items-center gap-3">
+            <Link
+              href="/marketplace"
+              className="hidden text-xs text-muted-foreground hover:text-foreground sm:block"
+            >
+              Marketplace
+            </Link>
             <span className="hidden text-xs text-muted-foreground sm:block">
-              Welcome, {firstName}
+              {firstName}
             </span>
             <Button
               asChild

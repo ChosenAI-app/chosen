@@ -6,6 +6,7 @@ import { ScopePoller } from "@/components/homeowner/ScopePoller"
 import { ProjectChatWindow } from "@/components/homeowner/ProjectChatWindow"
 import { MapSection } from "@/components/homeowner/MapSection"
 import { DeleteHomeownerProjectButton } from "@/components/homeowner/DeleteHomeownerProjectButton"
+import { PostToMarketplaceButton } from "@/components/homeowner/PostToMarketplaceButton"
 import {
   ArrowLeft,
   DollarSign,
@@ -13,6 +14,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   FileCheck,
+  Users,
 } from "lucide-react"
 import type { HomeownerProject } from "@/lib/types"
 
@@ -228,6 +230,57 @@ export default async function ExplorePage({
                   <p className="mt-2 text-sm leading-relaxed text-yellow-200/80">
                     {hp.ai_feasibility_notes}
                   </p>
+                </div>
+              )}
+
+              {/* Marketplace actions */}
+              {isScopeReady && (
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-5">
+                  <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary">
+                    <Users className="size-3.5" />
+                    Contractor Marketplace
+                  </h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Post your project to receive competitive bids from verified
+                    Palo Alto contractors.
+                  </p>
+                  <div className="mt-3">
+                    <PostToMarketplaceButton projectId={hp.id} />
+                  </div>
+                </div>
+              )}
+
+              {hp.status === "posted_to_marketplace" && (
+                <div className="rounded-lg border border-green-900/50 bg-green-950/20 p-5">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-green-400" />
+                    <span className="text-sm font-semibold text-green-300">
+                      Posted to Marketplace
+                    </span>
+                  </div>
+                  <Link
+                    href={`/homeowner/projects/${hp.id}/bids`}
+                    className="mt-3 inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                  >
+                    View Bids →
+                  </Link>
+                </div>
+              )}
+
+              {hp.status === "contractor_selected" && (
+                <div className="rounded-lg border border-green-900/50 bg-green-950/20 p-5">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-green-400" />
+                    <span className="text-sm font-semibold text-green-300">
+                      Contractor Selected
+                    </span>
+                  </div>
+                  <Link
+                    href={`/homeowner/projects/${hp.id}/bids`}
+                    className="mt-3 inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                  >
+                    View Bids →
+                  </Link>
                 </div>
               )}
 

@@ -9,7 +9,11 @@
       "mcp__context7__query-docs",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir -p /Users/shawnakshivakumar/Desktop/chosen/src/app/marketplace/[projectId])",
+      "Bash(mkdir -p /Users/shawnakshivakumar/Desktop/chosen/src/app/marketplace/profile/[userId])",
+      "Bash(mkdir -p /Users/shawnakshivakumar/Desktop/chosen/src/app/homeowner/projects/[id]/bids)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -1,152 +1,147 @@
-"use server";
+"use server"
 
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import { normalizeZip, isPaloAltoZip } from "@/lib/utils/jurisdiction";
+import { createClient } from "@/lib/supabase/server"
+import { redirect } from "next/navigation"
+import { normalizeZip } from "@/lib/utils/jurisdiction"
+import { isWestOf280 } from "@/lib/utils/geo"
 
 const VALID_PROJECT_TYPES = [
   "adu_detached",
   "adu_attached",
   "addition",
   "remodel",
-] as const;
+] as const
 
 export async function createProject(
   formData: FormData
 ): Promise<{ error: string | null }> {
-  // a. Extract and validate fields
-  const address = (formData.get("address") as string | null)?.trim();
-  const rawZip = formData.get("zip_code") as string | null;
-  const projectType = formData.get("project_type") as string | null;
+  const address = (formData.get("address") as string | null)?.trim()
+  const rawZip = formData.get("zip_code") as string | null
+  const projectType = formData.get("project_type") as string | null
   const scopeDescription =
-    (formData.get("scope_description") as string | null)?.trim() || null;
+    (formData.get("scope_description") as string | null)?.trim() || null
 
-  // Intake answers for conditional permits
-  const fireWestOf280 = formData.get("fireWestOf280") === "yes";
-  const fireSprinklersExist = formData.get("fireSprinklersExist") === "yes";
-  const hasEarthwork = formData.get("hasEarthwork") === "yes";
+  const formLat = formData.get("lat") as string | null
+  const formLng = formData.get("lng") as string | null
+
+  const fireSprinklersExist = formData.get("fireSprinklersExist") === "yes"
+  const hasEarthwork = formData.get("hasEarthwork") === "yes"
 
   if (!address) {
-    return { error: "Street address is required." };
+    return { error: "Street address is required." }
   }
 
-  if (!rawZip) {
-    return { error: "Zip code is required." };
-  }
-
-  const normalizedZip = normalizeZip(rawZip);
-
-  if (!isPaloAltoZip(normalizedZip)) {
-    return { error: "Chosen currently supports Palo Alto only (94301, 94303, 94304, 94306)." };
-  }
+  const normalizedZip = rawZip ? normalizeZip(rawZip) : ""
 
   if (
     !projectType ||
-    !VALID_PROJECT_TYPES.includes(projectType as (typeof VALID_PROJECT_TYPES)[number])
+    !VALID_PROJECT_TYPES.includes(
+      projectType as (typeof VALID_PROJECT_TYPES)[number]
+    )
   ) {
-    return { error: "Please select a valid project type." };
+    return { error: "Please select a valid project type." }
   }
 
-  // b. Auth check
-  const supabase = await createClient();
+  const supabase = await createClient()
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser()
 
   if (!user) {
-    return { error: "You must be logged in to create a project." };
+    return { error: "You must be logged in to create a project." }
   }
 
-  // c. Look up jurisdiction
-  let jurisdictionId: string;
-
-  try {
-    const { data: jurisdiction, error: jurisdictionError } = await supabase
+  // Look up jurisdiction
+  let jurisdictionId: string | null = null
+  if (normalizedZip) {
+    const { data: jurisdiction } = await supabase
       .from("jurisdictions")
       .select("id")
       .contains("zip_codes", [normalizedZip])
-      .single();
-
-    if (jurisdictionError || !jurisdiction) {
-      return { error: "Unsupported zip code." };
-    }
-
-    jurisdictionId = jurisdiction.id;
-  } catch {
-    return { error: "Failed to look up jurisdiction." };
+      .maybeSingle()
+    jurisdictionId = jurisdiction?.id ?? null
   }
 
-  // d. Insert project
-  let projectId: string;
+  if (!jurisdictionId) {
+    // Try default Palo Alto jurisdiction
+    const { data: paJurisdiction } = await supabase
+      .from("jurisdictions")
+      .select("id")
+      .eq("city", "Palo Alto")
+      .maybeSingle()
+    jurisdictionId = paJurisdiction?.id ?? null
+  }
+
+  if (!jurisdictionId) {
+    return { error: "Could not find jurisdiction." }
+  }
+
+  // Auto-detect west of 280
+  const lat = formLat ? parseFloat(formLat) : null
+  const lng = formLng ? parseFloat(formLng) : null
+  const fireWestOf280 =
+    lat && lng && !isNaN(lat) && !isNaN(lng)
+      ? isWestOf280(lat, lng)
+      : false
+
+  // Insert project
+  let projectId: string
 
   try {
     const { data: project, error: projectError } = await supabase
       .from("projects")
       .insert({
         user_id: user.id,
-        address,
+        address: address.replace(/, USA$/, ""),
         city: "Palo Alto",
-        zip_code: normalizedZip,
+        zip_code: normalizedZip || "94301",
         project_type: projectType,
         scope_description: scopeDescription,
         jurisdiction_id: jurisdictionId,
       })
       .select("id")
-      .single();
+      .single()
 
     if (projectError || !project) {
-      return { error: projectError?.message ?? "Failed to create project." };
+      return { error: projectError?.message ?? "Failed to create project." }
     }
 
-    projectId = project.id;
+    projectId = project.id
   } catch {
-    return { error: "Failed to create project." };
+    return { error: "Failed to create project." }
   }
 
-  // e. Query permit types for this jurisdiction and project type
-  // f. Bulk insert project_permits
+  // Generate permit workflow
   try {
-    const { data: permitTypes, error: permitTypesError } = await supabase
+    const { data: permitTypes } = await supabase
       .from("permit_types")
       .select("id, name")
       .eq("jurisdiction_id", jurisdictionId)
       .contains("required_for", [projectType])
-      .order("display_order", { ascending: true });
+      .order("display_order", { ascending: true })
 
-    if (permitTypesError) {
-      return { error: "Failed to load permit types." };
-    }
-
-    // Filter conditional permits based on intake answers
     const filteredPermitTypes = (permitTypes ?? []).filter((pt) => {
       if (pt.name === "Palo Alto Fire Department Review") {
-        return fireWestOf280 || fireSprinklersExist;
+        return fireWestOf280 || fireSprinklersExist
       }
       if (pt.name === "Grading and Drainage Plan") {
-        return hasEarthwork;
+        return hasEarthwork
       }
-      return true;
-    });
+      return true
+    })
 
     if (filteredPermitTypes.length > 0) {
-      const { error: permitsError } = await supabase
-        .from("project_permits")
-        .insert(
-          filteredPermitTypes.map((pt) => ({
-            project_id: projectId,
-            permit_type_id: pt.id,
-            status: "not_started" as const,
-          }))
-        );
-
-      if (permitsError) {
-        return { error: "Failed to create permit workflow." };
-      }
+      await supabase.from("project_permits").insert(
+        filteredPermitTypes.map((pt) => ({
+          project_id: projectId,
+          permit_type_id: pt.id,
+          status: "not_started" as const,
+        }))
+      )
     }
   } catch {
-    return { error: "Failed to generate permits." };
+    return { error: "Failed to generate permits." }
   }
 
-  // g. Redirect outside try/catch
-  redirect("/projects/" + projectId);
+  redirect("/projects/" + projectId)
 }

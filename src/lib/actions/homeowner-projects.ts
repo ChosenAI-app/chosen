@@ -8,6 +8,7 @@ import { generateObject } from "ai"
 import { anthropic } from "@ai-sdk/anthropic"
 import { z } from "zod"
 import { PALO_ALTO_SCOPE_SYSTEM_PROMPT } from "@/lib/ai/project-scope"
+import { isWestOf280 } from "@/lib/utils/geo"
 
 const VALID_PROJECT_TYPES = [
   "adu_detached",
@@ -127,38 +128,6 @@ async function fetchATTOMParcelData(address: string) {
     console.error("[ATTOM] Error:", err)
     return null
   }
-}
-
-// Highway 280 waypoints through Palo Alto (lat, lng pairs NW to SE)
-const HWY_280_WAYPOINTS: [number, number][] = [
-  [37.481, -122.204],
-  [37.46, -122.189],
-  [37.435, -122.175],
-  [37.42, -122.162],
-  [37.395, -122.145],
-  [37.37, -122.12],
-]
-
-function isWestOf280(lat: number, lng: number): boolean {
-  for (let i = 0; i < HWY_280_WAYPOINTS.length - 1; i++) {
-    const [lat1, lng1] = HWY_280_WAYPOINTS[i]
-    const [lat2, lng2] = HWY_280_WAYPOINTS[i + 1]
-
-    if (lat >= lat2 && lat <= lat1) {
-      const t = (lat - lat2) / (lat1 - lat2)
-      const hwy280Lng = lng2 + t * (lng1 - lng2)
-      const isWest = lng < hwy280Lng
-      console.log(
-        `[280 check] Property lng: ${lng}, 280 lng at lat ${lat}: ${hwy280Lng.toFixed(4)}, west: ${isWest}`
-      )
-      return isWest
-    }
-  }
-
-  console.log(
-    `[280 check] Lat ${lat} outside Palo Alto range — defaulting to not west of 280`
-  )
-  return false
 }
 
 export async function createHomeownerProject(formData: FormData): Promise<{
@@ -434,5 +403,28 @@ export async function deleteHomeownerProject(
   if (error) return { error: error.message }
 
   revalidatePath("/homeowner/dashboard")
+  return { error: null }
+}
+
+export async function postToMarketplace(
+  projectId: string
+): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return { error: "Not authenticated" }
+
+  const { error } = await supabase
+    .from("homeowner_projects")
+    .update({ status: "posted_to_marketplace" })
+    .eq("id", projectId)
+    .eq("homeowner_id", user.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath("/homeowner/projects/[id]/explore", "page")
+  revalidatePath("/marketplace")
   return { error: null }
 }
