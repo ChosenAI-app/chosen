@@ -340,7 +340,8 @@ export default async function ProjectDetailPage({
                 { slotRole: "client", label: "Client / Homeowner", desc: "Project owner" },
               ].map(({ slotRole, label, desc }) => {
                 const member = teamMembersRaw?.find((m) => m.role === slotRole);
-                const isProjectOwner = slotRole === "contractor" && project.user_id === user.id;
+                const isGCSlot = slotRole === "contractor";
+                const isViewingAsOwner = project.user_id === user.id;
                 const memberName = member?.user_id
                   ? teamProfiles[member.user_id] || member.invited_email
                   : member?.invited_email;
@@ -353,12 +354,12 @@ export default async function ProjectDetailPage({
                     <div className="flex items-center gap-3">
                       <div
                         className={`flex size-9 items-center justify-center rounded-full text-xs font-bold ${
-                          member || isProjectOwner
+                          member || isGCSlot
                             ? "border border-primary/30 bg-primary/20 text-primary"
                             : "border border-border bg-muted text-muted-foreground"
                         }`}
                       >
-                        {isProjectOwner
+                        {isGCSlot
                           ? (ownerProfile?.full_name?.charAt(0) ?? "C")
                           : member
                             ? (memberName?.charAt(0)?.toUpperCase() ?? slotRole.charAt(0).toUpperCase())
@@ -366,24 +367,29 @@ export default async function ProjectDetailPage({
                       </div>
                       <div>
                         <p className="text-sm font-medium">
-                          {isProjectOwner
-                            ? (ownerProfile?.full_name ?? "You")
+                          {isGCSlot
+                            ? (ownerProfile?.full_name ?? "General Contractor")
                             : member
                               ? memberName
                               : label}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {isProjectOwner ? "Project Owner" : member ? label : desc}
+                          {isGCSlot ? "Project Owner" : member ? label : desc}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {isProjectOwner && (
+                      {isGCSlot && isViewingAsOwner && (
                         <span className="rounded-sm bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
                           You
                         </span>
                       )}
-                      {!isProjectOwner && member && (
+                      {isGCSlot && !isViewingAsOwner && (
+                        <span className="rounded-sm bg-green-950 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-green-400">
+                          Active
+                        </span>
+                      )}
+                      {!isGCSlot && member && (
                         <span
                           className={`rounded-sm px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
                             member.invite_status === "accepted"
@@ -394,14 +400,14 @@ export default async function ProjectDetailPage({
                           {member.invite_status === "accepted" ? "Active" : "Invited"}
                         </span>
                       )}
-                      {!isProjectOwner && !member && userCanManageTeam && (
+                      {!isGCSlot && !member && userCanManageTeam && (
                         <InviteRoleButton
                           projectId={id}
                           role={slotRole}
                           label={label}
                         />
                       )}
-                      {!isProjectOwner && !member && !userCanManageTeam && (
+                      {!isGCSlot && !member && !userCanManageTeam && (
                         <span className="text-xs italic text-muted-foreground">
                           Open
                         </span>
