@@ -113,7 +113,7 @@ export default async function DashboardPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
-          Good morning, {firstName}
+          Welcome, {firstName}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Your active projects

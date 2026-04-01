@@ -1,10 +1,9 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { acceptInvitation, declineInvitation } from "@/lib/actions/team"
 import { GlobalNav } from "@/components/shared/GlobalNav"
-import { Button } from "@/components/ui/button"
+import { InvitationActions } from "@/components/invitations/InvitationActions"
 import { StatusBadge } from "@/components/ui/status-badge"
-import { MapPin, User, CheckCircle, XCircle } from "lucide-react"
+import { MapPin, User } from "lucide-react"
 
 const PROJECT_TYPE_LABELS: Record<string, string> = {
   adu_detached: "Detached ADU",
@@ -135,32 +134,10 @@ export default async function InvitationsPage() {
                     <StatusBadge status="pending" />
                   </div>
 
-                  <div className="flex gap-3">
-                    <form
-                      action={acceptInvitation.bind(
-                        null,
-                        invite.id,
-                        invite.project_id
-                      )}
-                    >
-                      <Button
-                        type="submit"
-                        size="sm"
-                        className="bg-primary text-primary-foreground hover:bg-primary/90"
-                      >
-                        <CheckCircle className="mr-1.5 size-3.5" />
-                        Accept
-                      </Button>
-                    </form>
-                    <form
-                      action={declineInvitation.bind(null, invite.id)}
-                    >
-                      <Button type="submit" variant="outline" size="sm">
-                        <XCircle className="mr-1.5 size-3.5" />
-                        Decline
-                      </Button>
-                    </form>
-                  </div>
+                  <InvitationActions
+                    inviteId={invite.id}
+                    projectId={invite.project_id}
+                  />
                 </div>
               )
             })}

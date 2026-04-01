@@ -3,7 +3,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { revalidatePath } from "next/cache"
-import { redirect } from "next/navigation"
 import { Resend } from "resend"
 
 const ROLE_LABELS: Record<string, string> = {
@@ -182,14 +181,14 @@ Once you sign up with this email address (${normalizedEmail}), you'll automatica
 export async function acceptInvitation(
   inviteId: string,
   projectId: string
-): Promise<void> {
+): Promise<{ error: string | null }> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return
+  if (!user) return { error: "Not authenticated" }
 
-  await supabase
+  const { error } = await supabase
     .from("team_members")
     .update({
       invite_status: "accepted",
@@ -198,25 +197,31 @@ export async function acceptInvitation(
     .eq("id", inviteId)
     .eq("invited_email", user.email!)
 
+  if (error) return { error: error.message }
+
   revalidatePath("/invitations")
   revalidatePath(`/projects/${projectId}`)
-  redirect(`/projects/${projectId}`)
+  return { error: null }
 }
 
-export async function declineInvitation(inviteId: string): Promise<void> {
+export async function declineInvitation(
+  inviteId: string
+): Promise<{ error: string | null }> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return
+  if (!user) return { error: "Not authenticated" }
 
-  await supabase
+  const { error } = await supabase
     .from("team_members")
     .update({ invite_status: "declined" })
     .eq("id", inviteId)
     .eq("invited_email", user.email!)
 
+  if (error) return { error: error.message }
   revalidatePath("/invitations")
+  return { error: null }
 }
 
 export async function removeTeamMember(
