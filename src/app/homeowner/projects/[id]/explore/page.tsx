@@ -275,12 +275,22 @@ export default async function ExplorePage({
                       Contractor Selected
                     </span>
                   </div>
-                  <Link
-                    href={`/homeowner/projects/${hp.id}/bids`}
-                    className="mt-3 inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                  >
-                    View Bids →
-                  </Link>
+                  <div className="mt-3 flex flex-col gap-2">
+                    {hp.contractor_project_id && (
+                      <Link
+                        href={`/projects/${hp.contractor_project_id}`}
+                        className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                      >
+                        View Project Dashboard →
+                      </Link>
+                    )}
+                    <Link
+                      href={`/homeowner/projects/${hp.id}/bids`}
+                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      View Bids
+                    </Link>
+                  </div>
                 </div>
               )}
 

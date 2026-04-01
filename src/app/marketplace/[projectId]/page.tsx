@@ -69,7 +69,6 @@ export default async function MarketplaceProjectPage({
   const isOwner = hp.homeowner_id === user.id
   const isHomeowner =
     !profile?.user_type || profile.user_type === "homeowner"
-  const showFullAddress = !!existingBid || isOwner
 
   return (
     <div className="flex flex-col gap-6">
@@ -82,9 +81,7 @@ export default async function MarketplaceProjectPage({
           Back to marketplace
         </Link>
         <h1 className="mt-2 text-2xl font-bold tracking-tight">
-          {showFullAddress
-            ? hp.address.replace(/, USA$/, "")
-            : "Street withheld until bid submitted"}
+          {hp.address.replace(/, USA$/, "")}
         </h1>
         <div className="mt-1 flex items-center gap-2">
           <span className="rounded-sm bg-primary/10 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-primary">

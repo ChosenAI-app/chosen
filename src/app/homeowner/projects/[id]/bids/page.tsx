@@ -2,8 +2,9 @@ import { createClient } from "@/lib/supabase/server"
 import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import { StatusBadge } from "@/components/ui/status-badge"
-import { AcceptBidButton } from "@/components/homeowner/AcceptBidButton"
-import { ArrowLeft, Star } from "lucide-react"
+import { BidAcceptButton } from "@/components/homeowner/BidAcceptButton"
+import { Button } from "@/components/ui/button"
+import { ArrowLeft, Star, ArrowRight } from "lucide-react"
 import type { HomeownerProject } from "@/lib/types"
 
 const USER_TYPE_LABELS: Record<string, string> = {
@@ -87,6 +88,18 @@ export default async function BidsPage({
           <p className="text-sm font-semibold text-green-300">
             Contractor selected — your project is moving forward.
           </p>
+          {hp.contractor_project_id && (
+            <Button
+              asChild
+              size="sm"
+              className="mt-3 bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              <Link href={`/projects/${hp.contractor_project_id}`}>
+                View Project Dashboard
+                <ArrowRight className="ml-1.5 size-3.5" />
+              </Link>
+            </Button>
+          )}
         </div>
       )}
 
@@ -180,7 +193,7 @@ export default async function BidsPage({
                     View Profile →
                   </Link>
                   {bid.status === "pending" && !hasAccepted && (
-                    <AcceptBidButton bidId={bid.id} />
+                    <BidAcceptButton bidId={bid.id} />
                   )}
                 </div>
               </div>

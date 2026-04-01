@@ -13,14 +13,8 @@ const PROJECT_TYPE_LABELS: Record<string, string> = {
   conversion: "Conversion",
 }
 
-function getNeighborhood(address: string): string {
-  const clean = address.replace(/, USA$/, "")
-  const parts = clean.split(",")
-  const street = parts[0]?.trim() ?? ""
-  // Strip house number — keep street name only
-  const streetName = street.replace(/^\d+\s+/, "")
-  const city = parts[1]?.trim() ?? "Palo Alto"
-  return `${streetName} area, ${city}`
+function cleanAddress(address: string): string {
+  return address.replace(/, USA$/, "")
 }
 
 function timeAgo(dateStr: string): string {
@@ -93,7 +87,7 @@ export default async function MarketplacePage() {
                     <StatusBadge status={project.status} />
                   </div>
                   <h3 className="mt-2 font-semibold text-foreground group-hover:text-primary transition-colors">
-                    {getNeighborhood(project.address)}
+                    {cleanAddress(project.address)}
                   </h3>
                   <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                     {project.lot_size_sqft && (
