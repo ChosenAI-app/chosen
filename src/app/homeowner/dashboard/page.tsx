@@ -134,7 +134,7 @@ export default async function HomeownerDashboardPage() {
             >
               <div className="flex items-start justify-between">
                 <Link
-                  href={`/homeowner/projects/${project.id}/explore`}
+                  href={`/homeowner/projects/${project.id}`}
                   className="group min-w-0 flex-1"
                 >
                   <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors duration-150">
@@ -170,7 +170,7 @@ export default async function HomeownerDashboardPage() {
                 </Link>
                 <div className="ml-3 flex shrink-0 items-center gap-2">
                   <DeleteHomeownerProjectButton projectId={project.id} />
-                  <Link href={`/homeowner/projects/${project.id}/explore`}>
+                  <Link href={`/homeowner/projects/${project.id}`}>
                     <ArrowRight className="size-4 text-muted-foreground transition-transform duration-150 hover:translate-x-0.5 hover:text-primary" />
                   </Link>
                 </div>
