@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { redirect } from "next/navigation"
 
 export async function signIn(
@@ -83,4 +84,23 @@ export async function signOut(): Promise<void> {
   const supabase = await createClient()
   await supabase.auth.signOut()
   redirect("/login")
+}
+
+export async function deleteAccount(): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return { error: "Not authenticated" }
+
+  // Sign out first to clear the session
+  await supabase.auth.signOut()
+
+  // Use admin client to delete user — cascades to all related data
+  const admin = createAdminClient()
+  const { error } = await admin.auth.admin.deleteUser(user.id)
+
+  if (error) return { error: error.message }
+  return { error: null }
 }

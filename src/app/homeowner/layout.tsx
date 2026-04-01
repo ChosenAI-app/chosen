@@ -65,6 +65,12 @@ export default async function HomeownerLayout({
             >
               Marketplace
             </Link>
+            <Link
+              href="/homeowner/settings"
+              className="hidden text-xs text-muted-foreground hover:text-foreground sm:block"
+            >
+              Settings
+            </Link>
             <span className="hidden text-xs text-muted-foreground sm:block">
               {firstName}
             </span>

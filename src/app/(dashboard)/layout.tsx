@@ -54,6 +54,12 @@ export default async function DashboardLayout({
             >
               Marketplace
             </Link>
+            <Link
+              href="/settings"
+              className="hidden text-xs text-muted-foreground hover:text-foreground sm:block"
+            >
+              Settings
+            </Link>
             <span className="hidden text-xs text-muted-foreground sm:block">
               {firstName}
             </span>
