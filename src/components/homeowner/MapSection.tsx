@@ -48,7 +48,7 @@ export function MapSection({
   const mapLng = hasExactCoords ? lng : PALO_ALTO_LNG
 
   return (
-    <div className="relative">
+    <div className="relative h-full w-full">
       <ProjectExploreMap
         lat={mapLat}
         lng={mapLng}

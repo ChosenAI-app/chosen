@@ -2,6 +2,7 @@ import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { StatusBadge } from "@/components/ui/status-badge"
+import { DeleteHomeownerProjectButton } from "@/components/homeowner/DeleteHomeownerProjectButton"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Plus, MapPin } from "lucide-react"
 import type { HomeownerProject } from "@/lib/types"
@@ -89,15 +90,17 @@ export default async function HomeownerDashboardPage() {
       ) : (
         <div className="flex flex-col gap-4">
           {typedProjects.map((project) => (
-            <Link
+            <div
               key={project.id}
-              href={`/homeowner/projects/${project.id}/explore`}
-              className="group rounded-lg border border-border bg-card p-5 transition-all duration-150 hover:border-primary/30"
+              className="rounded-lg border border-border bg-card p-5 transition-all duration-150 hover:border-primary/30"
             >
               <div className="flex items-start justify-between">
-                <div className="min-w-0 flex-1">
+                <Link
+                  href={`/homeowner/projects/${project.id}/explore`}
+                  className="group min-w-0 flex-1"
+                >
                   <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors duration-150">
-                    {project.address}
+                    {project.address.replace(/, USA$/, "")}
                   </h3>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span className="rounded-sm bg-secondary px-2 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-secondary-foreground">
@@ -126,10 +129,15 @@ export default async function HomeownerDashboardPage() {
                       )}
                     </span>
                   </div>
+                </Link>
+                <div className="ml-3 flex shrink-0 items-center gap-2">
+                  <DeleteHomeownerProjectButton projectId={project.id} />
+                  <Link href={`/homeowner/projects/${project.id}/explore`}>
+                    <ArrowRight className="size-4 text-muted-foreground transition-transform duration-150 hover:translate-x-0.5 hover:text-primary" />
+                  </Link>
                 </div>
-                <ArrowRight className="mt-1 size-4 shrink-0 text-muted-foreground transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-primary" />
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}

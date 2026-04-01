@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
+import { revalidatePath } from "next/cache"
 import { normalizeZip } from "@/lib/utils/jurisdiction"
 import { generateObject } from "ai"
 import { anthropic } from "@ai-sdk/anthropic"
@@ -285,4 +286,35 @@ export async function generateAIScope(projectId: string): Promise<void> {
       console.error("[generateAIScope] Failed to revert status to draft:", revertErr)
     }
   }
+}
+
+export async function deleteHomeownerProject(
+  projectId: string
+): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return { error: "Not authenticated" }
+
+  const { data: project } = await supabase
+    .from("homeowner_projects")
+    .select("id, homeowner_id")
+    .eq("id", projectId)
+    .eq("homeowner_id", user.id)
+    .maybeSingle()
+
+  if (!project) return { error: "Project not found or not authorized" }
+
+  const { error } = await supabase
+    .from("homeowner_projects")
+    .delete()
+    .eq("id", projectId)
+    .eq("homeowner_id", user.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath("/homeowner/dashboard")
+  return { error: null }
 }

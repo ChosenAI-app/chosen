@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/ui/status-badge"
 import { ScopePoller } from "@/components/homeowner/ScopePoller"
 import { ProjectChatWindow } from "@/components/homeowner/ProjectChatWindow"
 import { MapSection } from "@/components/homeowner/MapSection"
+import { DeleteHomeownerProjectButton } from "@/components/homeowner/DeleteHomeownerProjectButton"
 import {
   ArrowLeft,
   DollarSign,
@@ -60,15 +61,18 @@ export default async function ExplorePage({
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div>
-        <Link
-          href="/homeowner/dashboard"
-          className="text-xs text-muted-foreground hover:text-foreground transition-all duration-150"
-        >
-          <ArrowLeft className="mr-1 inline size-3" />
-          Back to projects
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link
+            href="/homeowner/dashboard"
+            className="text-xs text-muted-foreground hover:text-foreground transition-all duration-150"
+          >
+            <ArrowLeft className="mr-1 inline size-3" />
+            Back to projects
+          </Link>
+          <DeleteHomeownerProjectButton projectId={hp.id} />
+        </div>
         <h1 className="mt-2 text-2xl font-bold tracking-tight">
-          {hp.address}
+          {hp.address.replace(/, USA$/, "")}
         </h1>
         <div className="mt-1 flex items-center gap-2">
           <span className="rounded-sm bg-secondary px-2 py-0.5 text-[0.65rem] font-medium uppercase tracking-wider text-secondary-foreground">
@@ -83,7 +87,7 @@ export default async function ExplorePage({
         {/* Left — map + chat */}
         <div className="flex flex-col gap-4 lg:col-span-7">
           {/* Map */}
-          <div className="relative min-h-[500px] overflow-hidden rounded-lg border border-border">
+          <div className="relative h-[550px] overflow-hidden rounded-lg border border-border">
             <MapSection
               lat={hp.map_lat !== null ? Number(hp.map_lat) : null}
               lng={hp.map_lng !== null ? Number(hp.map_lng) : null}

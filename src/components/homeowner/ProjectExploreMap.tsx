@@ -28,9 +28,10 @@ export default function ProjectExploreMap({
   const initializedRef = useRef(false)
 
   useEffect(() => {
+    let isDestroyed = false
     let pollInterval: NodeJS.Timeout | null = null
     let pollCount = 0
-    const MAX_POLLS = 120 // 60 seconds at 500ms
+    const MAX_POLLS = 120
 
     function initViewer() {
       if (initializedRef.current) return
@@ -53,7 +54,7 @@ export default function ProjectExploreMap({
           animation: false,
           timeline: false,
           fullscreenButton: false,
-          requestRenderMode: true,
+          requestRenderMode: false,
           infoBox: false,
           selectionIndicator: false,
         })
@@ -62,30 +63,8 @@ export default function ProjectExploreMap({
 
         Cesium.createGooglePhotorealistic3DTileset({ key: apiKey })
           .then((tileset: unknown) => {
+            if (isDestroyed || !viewerRef.current) return
             viewer.scene.primitives.add(tileset)
-
-            // Stage 1 fly-in
-            viewer.camera.flyTo({
-              destination: Cesium.Cartesian3.fromDegrees(lng, lat, 400),
-              orientation: {
-                heading: 0.0,
-                pitch: Cesium.Math.toRadians(-30),
-                roll: 0.0,
-              },
-              duration: 2.5,
-              complete: () => {
-                // Stage 2 fly-in
-                viewer.camera.flyTo({
-                  destination: Cesium.Cartesian3.fromDegrees(lng, lat, 150),
-                  orientation: {
-                    heading: 0.0,
-                    pitch: Cesium.Math.toRadians(-60),
-                    roll: 0.0,
-                  },
-                  duration: 2.0,
-                })
-              },
-            })
 
             // Draw amber parcel polygon
             if (parcelGeometry) {
@@ -119,6 +98,41 @@ export default function ProjectExploreMap({
                 console.error("[CesiumJS] Polygon error:", e)
               }
             }
+
+            // Wait for tiles to stream in before flying
+            setTimeout(() => {
+              if (isDestroyed || !viewerRef.current) return
+
+              // Set initial camera position instantly
+              viewer.camera.flyTo({
+                destination: Cesium.Cartesian3.fromDegrees(lng, lat, 600),
+                orientation: {
+                  heading: Cesium.Math.toRadians(45),
+                  pitch: Cesium.Math.toRadians(-20),
+                  roll: 0.0,
+                },
+                duration: 0.1,
+              })
+
+              // Cinematic fly-in to 3D oblique view
+              setTimeout(() => {
+                if (isDestroyed || !viewerRef.current) return
+                viewer.camera.flyTo({
+                  destination: Cesium.Cartesian3.fromDegrees(
+                    lng + 0.001,
+                    lat - 0.001,
+                    200
+                  ),
+                  orientation: {
+                    heading: Cesium.Math.toRadians(330),
+                    pitch: Cesium.Math.toRadians(-35),
+                    roll: 0.0,
+                  },
+                  duration: 3.5,
+                  easingFunction: Cesium.EasingFunction.QUADRATIC_IN_OUT,
+                })
+              }, 300)
+            }, 2000)
           })
           .catch((err: unknown) =>
             console.error("[CesiumJS] 3D Tiles error:", err)
@@ -129,48 +143,34 @@ export default function ProjectExploreMap({
       }
     }
 
-    // If Cesium already loaded before this component mounted
+    // If Cesium already loaded
     if (window.Cesium) {
       initViewer()
-      return () => {
+    } else {
+      // Listen for the onLoad event from CesiumScriptLoader
+      function onCesiumLoaded() {
         if (pollInterval) clearInterval(pollInterval)
-        if (viewerRef.current) {
-          try {
-            viewerRef.current.destroy()
-          } catch {
-            // ignore
-          }
-          viewerRef.current = null
-        }
-        initializedRef.current = false
-      }
-    }
-
-    // Listen for the onLoad event from the Script tag
-    function onCesiumLoaded() {
-      if (pollInterval) clearInterval(pollInterval)
-      initViewer()
-    }
-    window.addEventListener("cesium-loaded", onCesiumLoaded)
-
-    // Also poll as fallback
-    pollInterval = setInterval(() => {
-      pollCount++
-      if (window.Cesium) {
-        clearInterval(pollInterval!)
-        window.removeEventListener("cesium-loaded", onCesiumLoaded)
         initViewer()
-      } else if (pollCount >= MAX_POLLS) {
-        clearInterval(pollInterval!)
-        window.removeEventListener("cesium-loaded", onCesiumLoaded)
-        console.error(
-          "[CesiumJS] Timed out waiting for script. Check network tab."
-        )
       }
-    }, 500)
+      window.addEventListener("cesium-loaded", onCesiumLoaded)
+
+      // Poll as fallback
+      pollInterval = setInterval(() => {
+        pollCount++
+        if (window.Cesium) {
+          clearInterval(pollInterval!)
+          window.removeEventListener("cesium-loaded", onCesiumLoaded)
+          initViewer()
+        } else if (pollCount >= MAX_POLLS) {
+          clearInterval(pollInterval!)
+          window.removeEventListener("cesium-loaded", onCesiumLoaded)
+          console.error("[CesiumJS] Timed out waiting for script.")
+        }
+      }, 500)
+    }
 
     return () => {
-      window.removeEventListener("cesium-loaded", onCesiumLoaded)
+      isDestroyed = true
       if (pollInterval) clearInterval(pollInterval)
       if (viewerRef.current) {
         try {
@@ -187,7 +187,16 @@ export default function ProjectExploreMap({
   return (
     <div
       ref={containerRef}
-      style={{ width: "100%", height: "100%", minHeight: "500px" }}
+      style={{
+        width: "100%",
+        height: "100%",
+        minHeight: "500px",
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+      }}
     />
   )
 }
