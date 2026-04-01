@@ -5,6 +5,10 @@ import { redirect } from "next/navigation"
 import { normalizeZip } from "@/lib/utils/jurisdiction"
 import { isWestOf280 } from "@/lib/utils/geo"
 import { fetchATTOMParcelData } from "@/lib/utils/attom"
+import { generateObject } from "ai"
+import { anthropic } from "@ai-sdk/anthropic"
+import { z } from "zod"
+import { buildContractorScopeSystem } from "@/lib/ai/project-scope"
 
 const VALID_PROJECT_TYPES = [
   "adu_detached",
@@ -168,5 +172,64 @@ export async function createProject(
     return { error: "Failed to generate permits." }
   }
 
-  redirect("/projects/" + projectId)
+  // Fire-and-forget AI scope generation
+  generateContractorScope(projectId).catch(console.error)
+
+  redirect(`/projects/${projectId}/explore`)
+}
+
+async function generateContractorScope(projectId: string): Promise<void> {
+  try {
+    if (!process.env.ANTHROPIC_API_KEY)
+      throw new Error("ANTHROPIC_API_KEY not set")
+
+    const supabase = await createClient()
+    const { data: project, error } = await supabase
+      .from("projects")
+      .select("*")
+      .eq("id", projectId)
+      .single()
+
+    if (error || !project) {
+      console.error("[generateContractorScope] Project not found:", error)
+      return
+    }
+
+    const { object } = await generateObject({
+      model: anthropic("claude-sonnet-4-6"),
+      schema: z.object({
+        scope_summary: z.string(),
+        permit_checklist: z.array(
+          z.object({
+            name: z.string(),
+            description: z.string(),
+            required: z.boolean(),
+          })
+        ),
+        cost_estimate_low: z.number(),
+        cost_estimate_high: z.number(),
+        timeline_weeks_low: z.number(),
+        timeline_weeks_high: z.number(),
+        feasibility_notes: z.string(),
+        key_risks: z.string(),
+        recommended_team: z.string(),
+      }),
+      system: buildContractorScopeSystem(),
+      prompt: `Project at ${project.address}. Type: ${project.project_type}. Lot: ${project.lot_size_sqft ?? "unknown"} SF. Zoning: ${project.zoning ?? "unknown"}. Year built: ${project.year_built ?? "unknown"}.`,
+    })
+
+    await supabase
+      .from("projects")
+      .update({
+        scope_description: JSON.stringify({
+          ai_scope: object,
+          original_description: project.scope_description,
+        }),
+      })
+      .eq("id", projectId)
+
+    console.log("[generateContractorScope] Done for project:", projectId)
+  } catch (err) {
+    console.error("[generateContractorScope] Error:", err)
+  }
 }

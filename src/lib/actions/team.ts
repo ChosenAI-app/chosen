@@ -126,10 +126,38 @@ export async function inviteTeamMember(
     return { error: insertError.message };
   }
 
-  // i. Revalidate
+  // i. Send invite email via Resend
+  try {
+    const { data: proj } = await supabase
+      .from("projects")
+      .select("address")
+      .eq("id", projectId)
+      .maybeSingle();
+
+    const { Resend } = await import("resend");
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    await resend.emails.send({
+      from: "Chosen <notifications@chosenai.com>",
+      to: normalizedEmail,
+      subject: "You've been invited to collaborate on a project",
+      text: `You've been invited to join a project on Chosen as ${role}.
+
+Sign up or log in at chosenai.com to accept the invitation and access the project.
+
+Project address: ${proj?.address ?? "Palo Alto project"}
+Your role: ${role}
+
+Questions? Reply to this email.`,
+    });
+    console.log("[team invite] Email sent to:", normalizedEmail);
+  } catch (emailErr) {
+    console.error("[team invite] Email failed (non-blocking):", emailErr);
+  }
+
+  // j. Revalidate
   revalidatePath("/projects/[id]", "page");
 
-  // j. Return
+  // k. Return
   return { error: null };
 }
 

@@ -2,6 +2,7 @@ import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { GlobalNav } from "@/components/shared/GlobalNav"
+import { CesiumScriptLoader } from "@/components/homeowner/CesiumScriptLoader"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 
@@ -51,6 +52,7 @@ export default async function DashboardLayout({
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
         {children}
       </main>
+      <CesiumScriptLoader />
     </div>
   )
 }

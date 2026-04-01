@@ -16,6 +16,13 @@ export type Project = {
   project_type: string;
   scope_description: string | null;
   jurisdiction_id: string;
+  lot_size_sqft: number | null;
+  year_built: number | null;
+  zoning: string | null;
+  zoning_description: string | null;
+  map_lat: number | null;
+  map_lng: number | null;
+  apn: string | null;
   created_at: string;
 };
 
