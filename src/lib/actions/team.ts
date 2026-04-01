@@ -188,14 +188,34 @@ export async function acceptInvitation(
   } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
-  const { error } = await supabase
+  // Verify invite exists and belongs to this user
+  const { data: invite } = await supabase
+    .from("team_members")
+    .select("id, invited_email, invite_status, project_id")
+    .eq("id", inviteId)
+    .maybeSingle()
+
+  console.log("[acceptInvitation] invite found:", invite)
+  console.log("[acceptInvitation] current user:", user.id, user.email)
+
+  if (!invite) return { error: "Invitation not found" }
+
+  if (invite.invited_email?.toLowerCase() !== user.email?.toLowerCase()) {
+    return { error: "Not authorized to accept this invitation" }
+  }
+
+  // Use admin client — RLS on team_members may block the user's own update
+  const admin = createAdminClient()
+  const { error, data } = await admin
     .from("team_members")
     .update({
       invite_status: "accepted",
       user_id: user.id,
     })
     .eq("id", inviteId)
-    .eq("invited_email", user.email!)
+    .select()
+
+  console.log("[acceptInvitation] update result:", { data, error: error?.message })
 
   if (error) return { error: error.message }
 
@@ -213,11 +233,31 @@ export async function declineInvitation(
   } = await supabase.auth.getUser()
   if (!user) return { error: "Not authenticated" }
 
-  const { error } = await supabase
+  // Verify invite exists and belongs to this user
+  const { data: invite } = await supabase
+    .from("team_members")
+    .select("id, invited_email, invite_status")
+    .eq("id", inviteId)
+    .maybeSingle()
+
+  console.log("[declineInvitation] invite found:", invite)
+  console.log("[declineInvitation] user email:", user.email)
+
+  if (!invite) return { error: "Invitation not found" }
+
+  if (invite.invited_email?.toLowerCase() !== user.email?.toLowerCase()) {
+    return { error: "Not authorized to decline this invitation" }
+  }
+
+  // Use admin client — RLS may block, and constraint needs 'declined' value
+  const admin = createAdminClient()
+  const { error, data } = await admin
     .from("team_members")
     .update({ invite_status: "declined" })
     .eq("id", inviteId)
-    .eq("invited_email", user.email!)
+    .select()
+
+  console.log("[declineInvitation] update result:", { data, error: error?.message })
 
   if (error) return { error: error.message }
   revalidatePath("/invitations")

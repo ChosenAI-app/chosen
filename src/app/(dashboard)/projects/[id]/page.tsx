@@ -62,15 +62,28 @@ export default async function ProjectDetailPage({
       .eq("invite_status", "accepted")
       .maybeSingle();
 
+    console.log("[project page] membership check:", {
+      projectId: id,
+      userId: user.id,
+      membership,
+    });
+
     if (membership) {
-      // Fetch project via admin client (bypasses RLS)
       const admin = createAdminClient();
-      const { data: teamProject } = await admin
+      const { data: teamProject, error: teamProjectError } = await admin
         .from("projects")
         .select("*, jurisdictions(name)")
         .eq("id", id)
         .maybeSingle();
-      project = teamProject;
+
+      console.log("[project page] admin fetch:", {
+        found: !!teamProject,
+        error: teamProjectError?.message,
+      });
+
+      if (teamProject) {
+        project = teamProject;
+      }
     }
   }
 
