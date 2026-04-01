@@ -8,14 +8,17 @@ export function CesiumScriptLoader() {
       {/* eslint-disable-next-line @next/next/no-css-tags */}
       <link
         rel="stylesheet"
-        href="https://ajax.googleapis.com/ajax/libs/cesiumjs/1.124/Build/Cesium/Widgets/widgets.css"
+        href="https://cesium.com/downloads/cesiumjs/releases/1.124/Build/Cesium/Widgets/widgets.css"
       />
       <Script
         id="cesiumjs"
-        src="https://ajax.googleapis.com/ajax/libs/cesiumjs/1.124/Build/Cesium/Cesium.js"
+        src="https://cesium.com/downloads/cesiumjs/releases/1.124/Build/Cesium/Cesium.js"
         strategy="afterInteractive"
         onLoad={() => {
-          window.dispatchEvent(new CustomEvent("cesium-loaded"))
+          console.log("[CesiumJS] Loaded successfully from official CDN")
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("cesium-loaded"))
+          }
         }}
         onError={() => {
           console.error("[CesiumJS] Script failed to load from CDN")
