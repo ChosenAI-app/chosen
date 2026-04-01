@@ -15,6 +15,10 @@ import {
 } from "@/components/ui/select"
 import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react"
 import { createHomeownerProject } from "@/lib/actions/homeowner-projects"
+import {
+  getProjectTypeConfig,
+  hasAnyQuestions,
+} from "@/lib/config/project-type-config"
 
 declare global {
   interface Window {
@@ -204,7 +208,16 @@ export default function StartPage() {
   function handleSubmit() {
     setError(null)
 
-    if (!fireSprinklersExist || !hasEarthwork || !separatelyMetered) {
+    const config = getProjectTypeConfig(projectType)
+    if (config.showSprinklers && !fireSprinklersExist) {
+      setError("Please answer all questions.")
+      return
+    }
+    if (config.showEarthwork && !hasEarthwork) {
+      setError("Please answer all questions.")
+      return
+    }
+    if (config.showSeparatelyMetered && !separatelyMetered) {
       setError("Please answer all questions.")
       return
     }
@@ -360,107 +373,74 @@ export default function StartPage() {
               </>
             )}
 
-            {step === 2 && (
+            {step === 2 && (() => {
+              const config = getProjectTypeConfig(projectType)
+              const showQuestions = hasAnyQuestions(config)
+
+              return (
               <>
                 <h1 className="text-xl font-bold tracking-tight">
-                  A few quick questions
+                  {config.step2Title}
                 </h1>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  These help us identify which permits your project requires.
+                  {config.step2Subtitle}
                 </p>
 
                 <div className="mt-6 flex flex-col gap-6">
-                  <fieldset>
-                    <legend className="text-sm font-medium text-foreground">
-                      Does the main house have fire sprinklers?
-                    </legend>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      If so, the ADU may also require sprinklers.
-                    </p>
-                    <div className="mt-2 flex gap-3">
-                      <Button
-                        type="button"
-                        variant={
-                          fireSprinklersExist === "yes" ? "default" : "outline"
-                        }
-                        size="sm"
-                        onClick={() => setFireSprinklersExist("yes")}
-                      >
-                        Yes
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={
-                          fireSprinklersExist === "no" ? "default" : "outline"
-                        }
-                        size="sm"
-                        onClick={() => setFireSprinklersExist("no")}
-                      >
-                        No
-                      </Button>
-                    </div>
-                  </fieldset>
+                  {config.showSprinklers && (
+                    <fieldset>
+                      <legend className="text-sm font-medium text-foreground">
+                        Does the main house have fire sprinklers?
+                      </legend>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        If so, the new structure may also require sprinklers.
+                      </p>
+                      <div className="mt-2 flex gap-3">
+                        <Button type="button" variant={fireSprinklersExist === "yes" ? "default" : "outline"} size="sm" onClick={() => setFireSprinklersExist("yes")}>Yes</Button>
+                        <Button type="button" variant={fireSprinklersExist === "no" ? "default" : "outline"} size="sm" onClick={() => setFireSprinklersExist("no")}>No</Button>
+                      </div>
+                    </fieldset>
+                  )}
 
-                  <fieldset>
-                    <legend className="text-sm font-medium text-foreground">
-                      Will the ADU have its own separate utility meter?
-                    </legend>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      A separately-metered ADU requires a dual-meter panel
-                      upgrade — adds ~$3,000–$8,000 to project cost.
-                    </p>
-                    <div className="mt-2 flex gap-3">
-                      <Button
-                        type="button"
-                        variant={
-                          separatelyMetered === "yes" ? "default" : "outline"
-                        }
-                        size="sm"
-                        onClick={() => setSeparatelyMetered("yes")}
-                      >
-                        Yes
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={
-                          separatelyMetered === "no" ? "default" : "outline"
-                        }
-                        size="sm"
-                        onClick={() => setSeparatelyMetered("no")}
-                      >
-                        No
-                      </Button>
-                    </div>
-                  </fieldset>
+                  {config.showSeparatelyMetered && (
+                    <fieldset>
+                      <legend className="text-sm font-medium text-foreground">
+                        Will the ADU have its own separate utility meter?
+                      </legend>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        A separately-metered ADU requires a dual-meter panel
+                        upgrade — adds ~$3,000–$8,000 to project cost.
+                      </p>
+                      <div className="mt-2 flex gap-3">
+                        <Button type="button" variant={separatelyMetered === "yes" ? "default" : "outline"} size="sm" onClick={() => setSeparatelyMetered("yes")}>Yes</Button>
+                        <Button type="button" variant={separatelyMetered === "no" ? "default" : "outline"} size="sm" onClick={() => setSeparatelyMetered("no")}>No</Button>
+                      </div>
+                    </fieldset>
+                  )}
 
-                  <fieldset>
-                    <legend className="text-sm font-medium text-foreground">
-                      Does the project involve earthwork or grading?
-                    </legend>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      Triggers a Grading and Drainage Plan requirement.
-                    </p>
-                    <div className="mt-2 flex gap-3">
-                      <Button
-                        type="button"
-                        variant={
-                          hasEarthwork === "yes" ? "default" : "outline"
-                        }
-                        size="sm"
-                        onClick={() => setHasEarthwork("yes")}
-                      >
-                        Yes
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={hasEarthwork === "no" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setHasEarthwork("no")}
-                      >
-                        No
-                      </Button>
+                  {config.showEarthwork && (
+                    <fieldset>
+                      <legend className="text-sm font-medium text-foreground">
+                        Does the project involve earthwork or grading?
+                      </legend>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Triggers a Grading and Drainage Plan requirement.
+                      </p>
+                      <div className="mt-2 flex gap-3">
+                        <Button type="button" variant={hasEarthwork === "yes" ? "default" : "outline"} size="sm" onClick={() => setHasEarthwork("yes")}>Yes</Button>
+                        <Button type="button" variant={hasEarthwork === "no" ? "default" : "outline"} size="sm" onClick={() => setHasEarthwork("no")}>No</Button>
+                      </div>
+                    </fieldset>
+                  )}
+
+                  {!showQuestions && (
+                    <div className="rounded-lg border border-border bg-card p-5 text-center">
+                      <p className="font-semibold">You&apos;re all set!</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        We have everything we need to generate your permit scope.
+                      </p>
                     </div>
-                  </fieldset>
+                  )}
                 </div>
 
                 {error && (
@@ -498,7 +478,8 @@ export default function StartPage() {
                   </Button>
                 </div>
               </>
-            )}
+              )
+            })()}
           </div>
         </div>
       </main>

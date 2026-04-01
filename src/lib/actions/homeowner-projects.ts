@@ -34,10 +34,14 @@ export async function createHomeownerProject(formData: FormData): Promise<{
   const formLat = formData.get("lat") as string | null
   const formLng = formData.get("lng") as string | null
 
+  // IMPORTANT: Run in Supabase SQL Editor if not already done:
+  // ALTER TABLE public.homeowner_projects
+  //   ADD COLUMN IF NOT EXISTS separately_metered boolean DEFAULT false,
+  //   ADD COLUMN IF NOT EXISTS adu_sqft integer;
   const separatelyMetered = formData.get("separately_metered") === "yes"
   const aduSqft = formData.get("adu_sqft")
     ? parseInt(formData.get("adu_sqft") as string)
-    : 800
+    : null
 
   const fireSprinklersExist = formData.get("fire_sprinklers_exist") === "yes"
   const hasEarthwork = formData.get("has_earthwork") === "yes"
