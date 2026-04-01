@@ -106,7 +106,16 @@ export default async function DashboardPage() {
     0
   );
 
-  const firstName = user?.email?.split("@")[0] ?? "there";
+  const { data: dashProfile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user!.id)
+    .maybeSingle();
+
+  const firstName =
+    dashProfile?.full_name?.trim().split(" ")[0] ||
+    user?.email?.split("@")[0] ||
+    "there";
 
   return (
     <div className="flex flex-col gap-8">
