@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { redirect } from "next/navigation"
-import { GlobalNav } from "@/components/shared/GlobalNav"
 import { InvitationActions } from "@/components/invitations/InvitationActions"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { MapPin, User } from "lucide-react"
@@ -28,12 +27,6 @@ export default async function InvitationsPage() {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) redirect("/login")
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, user_type")
-    .eq("id", user.id)
-    .maybeSingle()
 
   // Find all invitations for this user's email
   const { data: invitations } = await supabase
@@ -86,10 +79,8 @@ export default async function InvitationsPage() {
     invitations?.filter((i) => i.invite_status !== "pending") ?? []
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <GlobalNav user={user} profile={profile} />
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-10">
-        <div className="mb-8">
+    <div className="mx-auto max-w-2xl">
+      <div className="mb-8">
           <h1 className="text-2xl font-bold tracking-tight">Invitations</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Review project collaboration invitations sent to {user.email}
@@ -178,7 +169,6 @@ export default async function InvitationsPage() {
             })}
           </div>
         )}
-      </main>
     </div>
   )
 }
