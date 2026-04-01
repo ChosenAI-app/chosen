@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import { Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Project } from "@/lib/types";
@@ -33,6 +34,17 @@ export default async function DashboardPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Redirect homeowners to their dashboard
+  const { data: userProfile } = await supabase
+    .from("profiles")
+    .select("user_type")
+    .eq("id", user!.id)
+    .maybeSingle();
+
+  if (userProfile?.user_type === "homeowner") {
+    redirect("/homeowner/dashboard");
+  }
 
   const [ownedResult, memberResult] = await Promise.all([
     supabase
