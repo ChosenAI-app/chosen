@@ -53,6 +53,132 @@ const HOW_IT_WORKS = [
   },
 ]
 
+function HeroMapVisual() {
+  return (
+    <div className="relative w-full max-w-md mx-auto lg:mx-0">
+      {/* Outer glow */}
+      <div className="absolute inset-0 rounded-xl bg-primary/5 blur-xl" />
+
+      {/* Main card */}
+      <div className="relative rounded-xl border border-border bg-card overflow-hidden ring-1 ring-primary/20 shadow-[0_0_60px_rgba(245,158,11,0.06)]">
+        {/* Top bar */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+          <div className="flex items-center gap-2">
+            <div className="size-2 rounded-full bg-green-400 animate-pulse" />
+            <span className="text-xs text-muted-foreground font-mono">
+              chosenai.com / explore
+            </span>
+          </div>
+          <span className="text-[10px] font-bold tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded-sm">
+            3D LIVE
+          </span>
+        </div>
+
+        {/* Map area */}
+        <div className="relative h-72 bg-[#0a0e1a] overflow-hidden">
+          {/* Grid lines */}
+          <svg
+            className="absolute inset-0 w-full h-full opacity-[0.07]"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <defs>
+              <pattern
+                id="grid"
+                width="32"
+                height="32"
+                patternUnits="userSpaceOnUse"
+              >
+                <path
+                  d="M 32 0 L 0 0 0 32"
+                  fill="none"
+                  stroke="#F59E0B"
+                  strokeWidth="0.5"
+                />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)" />
+          </svg>
+
+          {/* Building blocks */}
+          <div className="absolute top-8 left-12 w-16 h-10 bg-zinc-700/60 rounded-sm" />
+          <div className="absolute top-8 left-32 w-10 h-14 bg-zinc-700/40 rounded-sm" />
+          <div className="absolute top-6 right-16 w-20 h-8 bg-zinc-700/50 rounded-sm" />
+          <div className="absolute top-20 right-8 w-12 h-16 bg-zinc-700/60 rounded-sm" />
+          <div className="absolute bottom-16 left-8 w-14 h-10 bg-zinc-700/40 rounded-sm" />
+          <div className="absolute bottom-12 left-28 w-8 h-12 bg-zinc-700/50 rounded-sm" />
+          <div className="absolute bottom-20 right-20 w-16 h-8 bg-zinc-700/40 rounded-sm" />
+
+          {/* Highlighted "selected" property */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -mt-4">
+            <div className="w-20 h-14 border-2 border-primary/80 rounded-sm bg-primary/10 shadow-[0_0_20px_rgba(245,158,11,0.3)]" />
+          </div>
+
+          {/* Pulse rings */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -mt-4 flex items-center justify-center">
+            <div className="absolute size-32 rounded-full border border-primary/30 animate-ping" />
+            <div className="absolute size-24 rounded-full border border-primary/20" />
+            <div className="absolute size-40 rounded-full border border-primary/10" />
+          </div>
+
+          {/* Center pin dot */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -mt-4 flex items-center justify-center">
+            <div className="size-3 rounded-full bg-primary shadow-[0_0_10px_rgba(245,158,11,0.8)]" />
+          </div>
+
+          {/* Floating data cards */}
+          <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-sm border border-border/50 rounded-lg px-3 py-2">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+              Lot Size
+            </p>
+            <p className="text-sm font-bold text-primary">7,500 SF</p>
+          </div>
+
+          <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm border border-border/50 rounded-lg px-3 py-2">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+              ADU Max
+            </p>
+            <p className="text-sm font-bold text-foreground">1,000 SF</p>
+          </div>
+        </div>
+
+        {/* Property info strip */}
+        <div className="px-4 py-3 border-t border-border/50 bg-black/20">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                444 Tennyson Ave
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Palo Alto, CA 94301 · Zoning: R-1 · Built 2007
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                Est. ADU Cost
+              </p>
+              <p className="text-sm font-bold text-primary">$420–$650k</p>
+            </div>
+          </div>
+
+          {/* Mini permit checklist */}
+          <div className="flex gap-2 mt-3">
+            {["Building Permit", "Electrical", "Plumbing", "Mechanical"].map(
+              (p) => (
+                <span
+                  key={p}
+                  className="text-[9px] bg-primary/10 text-primary/80 border border-primary/20 px-1.5 py-0.5 rounded-sm font-medium"
+                >
+                  {p}
+                </span>
+              )
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col">
@@ -89,20 +215,19 @@ export default function HomePage() {
               platform for residential construction in Palo Alto.
             </p>
 
-            <div className="mt-10 flex flex-col gap-6">
+            <div className="mt-8 flex flex-col gap-3">
               {VALUE_PROPS.map((prop) => (
-                <div key={prop.title} className="flex gap-4">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10">
-                    <prop.icon className="size-4 text-primary" />
+                <div key={prop.title} className="flex items-center gap-3">
+                  <div className="size-5 shrink-0 rounded-full bg-primary/20 flex items-center justify-center">
+                    <div className="size-1.5 rounded-full bg-primary" />
                   </div>
-                  <div>
-                    <p className="font-semibold text-foreground">
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-semibold text-foreground">
                       {prop.title}
-                    </p>
-                    <p className="mt-0.5 text-sm text-muted-foreground">
-                      {prop.description}
-                    </p>
-                  </div>
+                    </span>
+                    {" — "}
+                    {prop.description}
+                  </p>
                 </div>
               ))}
             </div>
@@ -121,16 +246,9 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Right — 45% — 3D map placeholder */}
+          {/* Right — 45% — Hero visual */}
           <div className="flex items-center justify-center lg:col-span-5">
-            <div className="flex aspect-square w-full max-w-md items-center justify-center rounded-lg border-2 border-dashed border-primary/30 bg-card/50">
-              <div className="text-center">
-                <MapPin className="mx-auto size-8 text-primary/40" />
-                <p className="mt-3 text-sm font-medium text-muted-foreground">
-                  3D Map Coming Phase 3
-                </p>
-              </div>
-            </div>
+            <HeroMapVisual />
           </div>
         </div>
       </section>
