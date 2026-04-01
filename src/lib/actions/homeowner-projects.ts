@@ -35,8 +35,19 @@ async function fetchATTOMParcelData(address: string) {
       .replace(/, United States$/, "")
       .trim()
     const parts = cleanAddress.split(",")
-    const address1 = parts[0]?.trim()
-    const address2 = parts.slice(1).join(",").trim()
+    const address1 = parts[0]?.trim() // "101 Alma St"
+
+    // Build address2 as "City, State" only — no zip code
+    // parts[1] = " Palo Alto", parts[2] = " CA 94301"
+    const city = parts[1]?.trim() // "Palo Alto"
+    const stateZip = parts[2]?.trim() ?? "" // "CA 94301"
+    const state = stateZip.split(" ")[0] // "CA"
+    const address2 =
+      city && state
+        ? `${city}, ${state}`
+        : parts.slice(1).join(",").trim()
+
+    console.log("[ATTOM] address1:", address1, "address2:", address2)
 
     if (!address1 || !address2) {
       console.error("[ATTOM] Could not parse address:", address)

@@ -33,6 +33,33 @@ export default function ProjectExploreMap({
     let pollCount = 0
     const MAX_POLLS = 120
 
+    function createMarkerCanvas(): HTMLCanvasElement {
+      const canvas = document.createElement("canvas")
+      canvas.width = 32
+      canvas.height = 32
+      const ctx = canvas.getContext("2d")!
+
+      // Outer glow
+      ctx.beginPath()
+      ctx.arc(16, 16, 14, 0, Math.PI * 2)
+      ctx.fillStyle = "rgba(245, 158, 11, 0.3)"
+      ctx.fill()
+
+      // Main circle
+      ctx.beginPath()
+      ctx.arc(16, 16, 10, 0, Math.PI * 2)
+      ctx.fillStyle = "#F59E0B"
+      ctx.fill()
+
+      // White center dot
+      ctx.beginPath()
+      ctx.arc(16, 16, 4, 0, Math.PI * 2)
+      ctx.fillStyle = "white"
+      ctx.fill()
+
+      return canvas
+    }
+
     function initViewer() {
       if (initializedRef.current) return
       if (!containerRef.current || !window.Cesium) return
@@ -99,13 +126,37 @@ export default function ProjectExploreMap({
               }
             }
 
+            // Add amber marker pin on the property
+            viewer.entities.add({
+              position: Cesium.Cartesian3.fromDegrees(lng, lat, 5),
+              billboard: {
+                image: createMarkerCanvas(),
+                verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                scale: 1.0,
+                disableDepthTestDistance: Number.POSITIVE_INFINITY,
+              },
+              label: {
+                text: "Your Property",
+                font: '12px Geist, sans-serif',
+                fillColor: Cesium.Color.fromCssColorString("#F59E0B"),
+                outlineColor: Cesium.Color.BLACK,
+                outlineWidth: 2,
+                style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                pixelOffset: new Cesium.Cartesian2(0, -40),
+                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                disableDepthTestDistance: Number.POSITIVE_INFINITY,
+              },
+            })
+
             // Wait for tiles to stream in before flying
             setTimeout(() => {
               if (isDestroyed || !viewerRef.current) return
 
               // Set initial camera position instantly
               viewer.camera.flyTo({
-                destination: Cesium.Cartesian3.fromDegrees(lng, lat, 400),
+                destination: Cesium.Cartesian3.fromDegrees(lng, lat, 300),
                 orientation: {
                   heading: Cesium.Math.toRadians(45),
                   pitch: Cesium.Math.toRadians(-15),
@@ -118,17 +169,17 @@ export default function ProjectExploreMap({
               setTimeout(() => {
                 if (isDestroyed || !viewerRef.current) return
                 viewer.camera.flyTo({
-                  destination: Cesium.Cartesian3.fromDegrees(lng, lat, 180),
+                  destination: Cesium.Cartesian3.fromDegrees(lng, lat, 80),
                   orientation: {
                     heading: Cesium.Math.toRadians(330),
-                    pitch: Cesium.Math.toRadians(-40),
+                    pitch: Cesium.Math.toRadians(-45),
                     roll: 0.0,
                   },
                   duration: 3.0,
                   easingFunction: Cesium.EasingFunction.QUADRATIC_IN_OUT,
                 })
               }, 300)
-            }, 2000)
+            }, 1500)
           })
           .catch((err: unknown) =>
             console.error("[CesiumJS] 3D Tiles error:", err)
