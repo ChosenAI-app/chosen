@@ -5,8 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PermitStatusSelect } from "@/components/permits/PermitStatusSelect";
 import { DeleteProjectButton } from "@/components/permits/DeleteProjectButton";
-import { InviteTeamMemberForm } from "@/components/team/InviteTeamMemberForm";
-import { TeamMemberList } from "@/components/team/TeamMemberList";
+import { InviteRoleButton } from "@/components/permits/InviteRoleButton";
 import {
   getUserRole,
   canManageTeam,
@@ -106,6 +105,37 @@ export default async function ProjectDetailPage({
     .select("*, permit_types(name, description)")
     .eq("project_id", id)
     .order("created_at", { ascending: true });
+
+  // Fetch team members
+  const admin = createAdminClient();
+  const { data: teamMembersRaw } = await admin
+    .from("team_members")
+    .select("id, role, invite_status, invited_email, user_id")
+    .eq("project_id", id);
+
+  // Fetch profiles for team members
+  const teamUserIds = (teamMembersRaw ?? [])
+    .map((m) => m.user_id)
+    .filter(Boolean) as string[];
+  let teamProfiles: Record<string, string> = {};
+  if (teamUserIds.length > 0) {
+    const { data: profileData } = await admin
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", teamUserIds);
+    if (profileData) {
+      for (const p of profileData) {
+        teamProfiles[p.id] = p.full_name ?? "";
+      }
+    }
+  }
+
+  // Fetch owner profile
+  const { data: ownerProfile } = await admin
+    .from("profiles")
+    .select("full_name")
+    .eq("id", project.user_id)
+    .maybeSingle();
 
   const jurisdictionName =
     (project as Record<string, unknown>).jurisdictions &&
@@ -296,20 +326,90 @@ export default async function ProjectDetailPage({
             </div>
           </div>
 
-          {/* Team */}
+          {/* Project Team */}
           {userCanViewTeam && (
-            <div className="rounded-md border border-border bg-card p-5">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Team
-              </h3>
-              <div className="mt-4 flex flex-col gap-4">
-                {userCanManageTeam && <InviteTeamMemberForm projectId={id} />}
-                <TeamMemberList
-                  projectId={id}
-                  currentUserId={user.id}
-                  canManage={userCanManageTeam}
-                />
-              </div>
+            <div className="rounded-lg border border-border bg-card p-5">
+              <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Project Team
+              </h2>
+              {[
+                { slotRole: "contractor", label: "General Contractor", desc: "Leads construction" },
+                { slotRole: "architect", label: "Architect", desc: "Plans and drawings" },
+                { slotRole: "engineer", label: "Engineer", desc: "Structural / MEP" },
+                { slotRole: "inspector", label: "Inspector", desc: "Code compliance" },
+                { slotRole: "client", label: "Client / Homeowner", desc: "Project owner" },
+              ].map(({ slotRole, label, desc }) => {
+                const member = teamMembersRaw?.find((m) => m.role === slotRole);
+                const isProjectOwner = slotRole === "contractor" && project.user_id === user.id;
+                const memberName = member?.user_id
+                  ? teamProfiles[member.user_id] || member.invited_email
+                  : member?.invited_email;
+
+                return (
+                  <div
+                    key={slotRole}
+                    className="flex items-center justify-between border-b border-border/50 py-3 last:border-0"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`flex size-9 items-center justify-center rounded-full text-xs font-bold ${
+                          member || isProjectOwner
+                            ? "border border-primary/30 bg-primary/20 text-primary"
+                            : "border border-border bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {isProjectOwner
+                          ? (ownerProfile?.full_name?.charAt(0) ?? "C")
+                          : member
+                            ? (memberName?.charAt(0)?.toUpperCase() ?? slotRole.charAt(0).toUpperCase())
+                            : slotRole.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">
+                          {isProjectOwner
+                            ? (ownerProfile?.full_name ?? "You")
+                            : member
+                              ? memberName
+                              : label}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {isProjectOwner ? "Project Owner" : member ? label : desc}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isProjectOwner && (
+                        <span className="rounded-sm bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                          You
+                        </span>
+                      )}
+                      {!isProjectOwner && member && (
+                        <span
+                          className={`rounded-sm px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                            member.invite_status === "accepted"
+                              ? "bg-green-950 text-green-400"
+                              : "bg-yellow-950 text-yellow-400"
+                          }`}
+                        >
+                          {member.invite_status === "accepted" ? "Active" : "Invited"}
+                        </span>
+                      )}
+                      {!isProjectOwner && !member && userCanManageTeam && (
+                        <InviteRoleButton
+                          projectId={id}
+                          role={slotRole}
+                          label={label}
+                        />
+                      )}
+                      {!isProjectOwner && !member && !userCanManageTeam && (
+                        <span className="text-xs italic text-muted-foreground">
+                          Open
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 
