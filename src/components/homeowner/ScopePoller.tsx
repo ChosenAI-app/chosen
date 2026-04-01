@@ -1,66 +1,66 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 
 export function ScopePoller({ projectId }: { projectId: string }) {
   const router = useRouter()
+  const hasRefreshed = useRef(false)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    const interval = setInterval(async () => {
+    if (hasRefreshed.current) return
+
+    intervalRef.current = setInterval(async () => {
+      if (hasRefreshed.current) {
+        if (intervalRef.current) clearInterval(intervalRef.current)
+        return
+      }
+
       try {
         const res = await fetch(
           `/api/homeowner/project-status?id=${projectId}`
         )
         if (!res.ok) return
-        const data = await res.json()
-        if (data.status === "scope_ready" || data.status === "cancelled") {
-          clearInterval(interval)
+        const { status } = await res.json()
+
+        if (status === "scope_ready" || status === "cancelled") {
+          if (intervalRef.current) clearInterval(intervalRef.current)
+          hasRefreshed.current = true
+          await new Promise((r) => setTimeout(r, 500))
           router.refresh()
         }
-      } catch (err) {
-        console.error("[ScopePoller] fetch error:", err)
+      } catch {
+        // Keep polling on network error
       }
     }, 3000)
 
-    return () => clearInterval(interval)
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
   }, [projectId, router])
 
   return (
-    <div className="rounded-lg border border-primary/20 bg-primary/5 p-6">
-      <div className="flex flex-col items-center py-6">
-        {/* Pulsing amber dot */}
-        <div className="relative flex items-center justify-center">
-          <div className="absolute size-10 animate-ping rounded-full bg-primary/20" />
-          <div className="size-4 rounded-full bg-primary" />
-        </div>
-
-        <p className="mt-6 font-semibold text-foreground">
-          Our AI is analyzing your property...
-        </p>
-        <p className="mt-1.5 text-center text-sm text-muted-foreground">
-          This takes about 30 seconds. The page will update automatically.
-        </p>
-
-        {/* Visual progress bar — pure CSS animation, not tied to actual progress */}
-        <div className="mt-6 h-1 w-full max-w-xs overflow-hidden rounded-full bg-primary/10">
-          <div
-            className="h-full rounded-full bg-primary/50"
-            style={{
-              animation: "scopeProgress 30s ease-out forwards",
-            }}
-          />
-        </div>
+    <div className="flex min-h-[500px] w-full flex-col items-center justify-center rounded-lg border border-border bg-card/50 p-8 text-center">
+      <div className="size-4 animate-pulse rounded-full bg-primary" />
+      <p className="mt-6 text-lg font-semibold">
+        Our AI is analyzing your property...
+      </p>
+      <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+        This takes about 30 seconds. The page will update automatically.
+      </p>
+      <div className="mt-8 h-1 w-64 overflow-hidden rounded-full bg-border">
+        <div
+          className="h-full rounded-full bg-primary"
+          style={{
+            animation: "progress 25s ease-in-out forwards",
+          }}
+        />
       </div>
-
-      <style jsx>{`
-        @keyframes scopeProgress {
-          from {
-            width: 0%;
-          }
-          to {
-            width: 95%;
-          }
+      <style>{`
+        @keyframes progress {
+          from { width: 0% }
+          to { width: 95% }
         }
       `}</style>
     </div>
