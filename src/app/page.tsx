@@ -244,7 +244,7 @@ export default function HomePage() {
                 size="lg"
                 className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 text-base font-semibold transition-all duration-150"
               >
-                <Link href="/start">
+                <Link href="/signup">
                   Start Your Project
                   <ArrowRight className="ml-2 size-4" />
                 </Link>
