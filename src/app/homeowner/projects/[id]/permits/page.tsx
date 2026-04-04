@@ -4,26 +4,14 @@ import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import {
   ArrowLeft,
-  FileText,
+  Sparkles,
   CheckCircle2,
-  Building2,
-  MapPin,
-  DollarSign,
+  AlertTriangle,
 } from "lucide-react"
+import { FormFillCard } from "@/components/homeowner/permits/FormFillCard"
+import { GenerateFormsButton } from "@/components/homeowner/permits/GenerateFormsButton"
 import { SubmitToAccelaButton } from "@/components/homeowner/permits/SubmitToAccelaButton"
 import { AccelaSubmissionStatus } from "@/components/homeowner/permits/AccelaSubmissionStatus"
-import { ApplicantTypeSelector } from "@/components/homeowner/permits/ApplicantTypeSelector"
-import type { HomeownerProject } from "@/lib/types"
-
-const PROJECT_TYPE_LABELS: Record<string, string> = {
-  adu_detached: "Detached ADU",
-  adu_attached: "Attached ADU",
-  jadu: "Junior ADU",
-  addition: "Residential Addition",
-  remodel: "Interior Remodel",
-  new_construction: "New Construction",
-  conversion: "Conversion",
-}
 
 export default async function PermitsPage({
   params,
@@ -46,10 +34,14 @@ export default async function PermitsPage({
 
   if (!project) notFound()
 
-  const hp = project as HomeownerProject
-  const hasScope = !!hp.ai_scope_summary
+  // Fetch form fills
+  const { data: formFills } = await supabase
+    .from("permit_form_fills")
+    .select("*")
+    .eq("homeowner_project_id", id)
+    .order("created_at", { ascending: true })
 
-  // Check for existing submission
+  // Fetch submission
   const admin = createAdminClient()
   const { data: submission } = await admin
     .from("accela_submissions")
@@ -58,11 +50,21 @@ export default async function PermitsPage({
     .order("created_at", { ascending: false })
     .maybeSingle()
 
-  // Get permit checklist from AI scope
-  const permitChecklist = hp.ai_permit_checklist ?? []
+  const hasFormFills = formFills && formFills.length > 0
+  const allApproved =
+    hasFormFills && formFills.every((f) => f.status === "approved")
+  const totalFlagged =
+    formFills?.reduce(
+      (sum, f) =>
+        sum + ((f.flagged_fields as unknown[])?.length ?? 0),
+      0
+    ) ?? 0
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const hasScope = !!(project as any).ai_scope_summary
+  const address = project.address?.replace(/, USA$/, "")
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="mx-auto flex max-w-3xl flex-col gap-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <Link
@@ -72,176 +74,129 @@ export default async function PermitsPage({
           <ArrowLeft className="size-3.5" />
           Back to project
         </Link>
-        <Link
-          href={`/homeowner/projects/${id}/explore`}
-          className="text-xs text-primary hover:underline"
-        >
-          View AI analysis →
-        </Link>
+        {hasFormFills && (
+          <GenerateFormsButton projectId={id} label="Regenerate" />
+        )}
       </div>
 
       <div>
         <h1 className="text-2xl font-bold">Permit Package</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {hp.address?.replace(/, USA$/, "")}
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{address}</p>
       </div>
+
+      {/* Status summary */}
+      {hasFormFills && (
+        <div
+          className={`flex items-center gap-3 rounded-lg border p-4 ${
+            allApproved
+              ? "border-green-900/50 bg-green-950/20"
+              : totalFlagged > 0
+                ? "border-amber-900/40 bg-amber-950/10"
+                : "border-border bg-card"
+          }`}
+        >
+          {allApproved ? (
+            <CheckCircle2 className="size-5 shrink-0 text-green-400" />
+          ) : (
+            <AlertTriangle className="size-5 shrink-0 text-amber-400" />
+          )}
+          <div>
+            <p
+              className={`text-sm font-semibold ${allApproved ? "text-green-400" : "text-amber-400"}`}
+            >
+              {allApproved
+                ? "All forms approved — ready to submit to city"
+                : `${totalFlagged} field${totalFlagged !== 1 ? "s" : ""} still need your input`}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {allApproved
+                ? "Review the certification below and click submit"
+                : "Open each form below to answer the highlighted questions"}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* No scope yet */}
       {!hasScope && (
-        <div className="rounded-lg border border-border bg-card/50 p-6 text-center">
+        <div className="rounded-lg border border-border bg-card/50 p-8 text-center">
           <p className="text-sm text-muted-foreground">
-            AI scope not yet generated. Go to the{" "}
+            Generate your AI scope first on the{" "}
             <Link
               href={`/homeowner/projects/${id}/explore`}
               className="text-primary hover:underline"
             >
               explore page
             </Link>{" "}
-            to generate your project scope first.
+            before coming here.
           </p>
         </div>
       )}
 
-      {/* Scope ready — show the permit flow */}
-      {hasScope && (
-        <>
-          {/* Step 1 — Project summary card */}
-          <div className="rounded-lg border border-border bg-card p-5">
-            <div className="flex items-center gap-3">
-              <div className="flex size-9 items-center justify-center rounded-full bg-primary/10">
-                <MapPin className="size-4 text-primary" />
-              </div>
-              <div>
-                <p className="font-semibold">
-                  {hp.address?.replace(/, USA$/, "")}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {PROJECT_TYPE_LABELS[hp.project_type] ?? hp.project_type}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {hp.lot_size_sqft && (
-                <div className="rounded bg-muted/30 p-2">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Lot Size
-                  </p>
-                  <p className="text-sm font-medium">
-                    {hp.lot_size_sqft.toLocaleString()} SF
-                  </p>
-                </div>
-              )}
-              {hp.year_built && (
-                <div className="rounded bg-muted/30 p-2">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Year Built
-                  </p>
-                  <p className="text-sm font-medium">{hp.year_built}</p>
-                </div>
-              )}
-              {hp.ai_cost_estimate_low && hp.ai_cost_estimate_high && (
-                <div className="col-span-2 rounded bg-muted/30 p-2">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Estimated Cost
-                  </p>
-                  <p className="text-sm font-bold text-primary">
-                    ${hp.ai_cost_estimate_low.toLocaleString()}–$
-                    {hp.ai_cost_estimate_high.toLocaleString()}
-                  </p>
-                </div>
-              )}
-            </div>
+      {/* No forms yet — show generate button */}
+      {hasScope && !hasFormFills && (
+        <div className="flex flex-col items-center gap-5 rounded-lg border border-border bg-card p-8 text-center">
+          <div className="flex size-14 items-center justify-center rounded-full bg-primary/10">
+            <Sparkles className="size-7 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold">
+              Generate your permit package
+            </h2>
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+              Chosen will pre-fill all required City of Palo Alto permit
+              forms using your property data and AI scope. You review each
+              field and answer ~5 questions AI can&apos;t answer automatically.
+            </p>
           </div>
 
-          {/* Step 2 — Required permits from AI scope */}
-          {permitChecklist.length > 0 && (
-            <div className="rounded-lg border border-border bg-card p-5">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Required Permits
-              </h3>
-              <div className="flex flex-col gap-2">
-                {permitChecklist.map(
-                  (
-                    permit: {
-                      name: string
-                      description: string
-                      required: boolean
-                    },
-                    i: number
-                  ) => (
-                    <div key={i} className="flex items-start gap-2.5">
-                      <CheckCircle2
-                        className={`mt-0.5 size-4 shrink-0 ${
-                          permit.required
-                            ? "text-primary"
-                            : "text-muted-foreground"
-                        }`}
-                      />
-                      <div>
-                        <p className="text-sm font-medium">{permit.name}</p>
-                        {permit.description && (
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {permit.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )
-                )}
+          <div className="grid w-full max-w-sm grid-cols-2 gap-3 text-left">
+            {[
+              ["Building Permit", "~80% pre-filled"],
+              ["Utility Service", "~70% pre-filled"],
+              [
+                "SB-407 Plumbing",
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (project as any).year_built > 1994
+                  ? "Auto-exempt ✓"
+                  : "~85% pre-filled",
+              ],
+              ["Fire Checklist", "~90% pre-filled"],
+            ].map(([name, pct]) => (
+              <div key={name} className="rounded-md bg-muted/30 p-3">
+                <p className="text-xs font-medium leading-tight">{name}</p>
+                <p className="mt-1 text-[10px] text-primary">{pct}</p>
               </div>
-            </div>
-          )}
-
-          {/* Step 3 — AI scope summary as "pre-filled application" */}
-          <div className="rounded-lg border border-border bg-card p-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-full bg-primary/10">
-                  <FileText className="size-4 text-primary" />
-                </div>
-                <div>
-                  <p className="font-semibold">
-                    Building Permit Application
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Pre-filled from your AI project scope
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-1 text-xs font-medium text-green-400">
-                <CheckCircle2 className="size-3.5" />
-                Ready
-              </div>
-            </div>
-
-            {hp.ai_scope_summary && (
-              <div className="mt-3 rounded bg-muted/20 p-3">
-                <p className="text-xs text-muted-foreground">
-                  Scope Summary
-                </p>
-                <p className="mt-1 text-sm leading-relaxed line-clamp-4">
-                  {hp.ai_scope_summary}
-                </p>
-              </div>
-            )}
+            ))}
           </div>
 
-          {/* Step 4 — Applicant type selection */}
-          {!submission && (
-            <ApplicantTypeSelector projectId={id} />
-          )}
-
-          {/* Submission status (if already submitted) */}
-          {submission && <AccelaSubmissionStatus submission={submission} />}
-
-          {/* Submit button (if not yet submitted) */}
-          {!submission && (
-            <SubmitToAccelaButton projectId={id} />
-          )}
-        </>
+          <GenerateFormsButton projectId={id} />
+        </div>
       )}
+
+      {/* Form fill cards */}
+      {hasFormFills && (
+        <div className="flex flex-col gap-4">
+          {formFills.map((fill) => (
+            <FormFillCard key={fill.id} fill={fill} />
+          ))}
+        </div>
+      )}
+
+      {/* Submit section */}
+      {hasFormFills && !submission && allApproved && (
+        <SubmitToAccelaButton projectId={id} />
+      )}
+
+      {hasFormFills && !submission && !allApproved && (
+        <div className="rounded-lg border border-border bg-card/50 p-4 text-center">
+          <p className="text-sm text-muted-foreground">
+            Answer all highlighted fields above to unlock city submission.
+          </p>
+        </div>
+      )}
+
+      {submission && <AccelaSubmissionStatus submission={submission} />}
     </div>
   )
 }

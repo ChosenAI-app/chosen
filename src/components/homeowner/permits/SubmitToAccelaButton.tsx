@@ -3,10 +3,10 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import {
-  submitToAccela,
-  ACCELA_CERTIFICATION_TEXT,
-} from "@/lib/actions/accela-submit"
+import { submitToAccela } from "@/lib/actions/accela-submit"
+
+const CERTIFICATION_TEXT =
+  "I certify that I have read and understand the instructions that accompany this application and that the statements made as part of this application are true, complete, and correct and that no material information has been omitted. By checking the box below, I understand and agree that I am electronically signing and filing this application."
 import {
   Loader2,
   Building2,
@@ -100,7 +100,7 @@ export function SubmitToAccelaButton({
           Certification Required
         </p>
         <p className="text-sm italic leading-relaxed text-foreground">
-          &quot;{ACCELA_CERTIFICATION_TEXT}&quot;
+          &quot;{CERTIFICATION_TEXT}&quot;
         </p>
         <label className="mt-4 flex cursor-pointer items-start gap-3">
           <input
