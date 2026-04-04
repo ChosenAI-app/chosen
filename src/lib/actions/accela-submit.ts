@@ -12,7 +12,7 @@ import {
 } from "@/lib/accela/client"
 import { generatePermitPDFPackage } from "@/lib/accela/pdf-generator"
 
-export const ACCELA_CERTIFICATION_TEXT = `I certify that I have read and understand the instructions that accompany this application and that the statements made as part of this application are true, complete, and correct and that no material information has been omitted. By checking the box below, I understand and agree that I am electronically signing and filing this application.`
+const CERT_TEXT = "I certify that I have read and understand the instructions that accompany this application and that the statements made as part of this application are true, complete, and correct and that no material information has been omitted. By checking the box below, I understand and agree that I am electronically signing and filing this application."
 
 export async function submitToAccela(
   projectId: string,
@@ -75,7 +75,7 @@ export async function submitToAccela(
       status: "pending",
       certified_by_user_id: user.id,
       certified_at: new Date().toISOString(),
-      certification_text: ACCELA_CERTIFICATION_TEXT,
+      certification_text: CERT_TEXT,
     })
     .select()
     .single()
