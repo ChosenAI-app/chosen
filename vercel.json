@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/accela/poll-status",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}

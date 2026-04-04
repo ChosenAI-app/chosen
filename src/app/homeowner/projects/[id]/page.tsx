@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, FileText, ChevronRight } from "lucide-react"
 import { HomeownerProjectTeam } from "@/components/homeowner/HomeownerProjectTeam"
 
 const PROJECT_TYPE_LABELS: Record<string, string> = {
@@ -134,6 +134,27 @@ export default async function HomeownerProjectDashboard({
           )}
         </div>
       )}
+
+      {/* Permit Package link */}
+      <Link
+        href={`/homeowner/projects/${id}/permits`}
+        className="group flex items-center justify-between rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/30"
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex size-9 items-center justify-center rounded-full bg-primary/10">
+            <FileText className="size-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold transition-colors group-hover:text-primary">
+              Permit Package
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              AI pre-fills your forms — review, approve, submit to city
+            </p>
+          </div>
+        </div>
+        <ChevronRight className="size-4 text-muted-foreground group-hover:text-primary" />
+      </Link>
 
       {isContractorSelected && project.contractor_project_id && (
         <div className="flex items-center justify-between gap-4 rounded-lg border border-green-900/50 bg-green-950/20 p-4">
