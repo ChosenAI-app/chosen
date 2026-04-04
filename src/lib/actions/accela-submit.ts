@@ -226,7 +226,8 @@ export async function submitToAccela(
     }
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err)
-    console.error("[Accela Submit] Failed:", errorMsg)
+    console.error("[Accela Submit] Detailed error:", err)
+    console.error("[Accela Submit] Stack:", err instanceof Error ? err.stack : "no stack")
 
     await admin
       .from("accela_submissions")

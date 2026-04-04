@@ -7,6 +7,7 @@ import { ProjectChatWindow } from "@/components/homeowner/ProjectChatWindow"
 import { MapSection } from "@/components/homeowner/MapSection"
 import { DeleteHomeownerProjectButton } from "@/components/homeowner/DeleteHomeownerProjectButton"
 import { PostToMarketplaceButton } from "@/components/homeowner/PostToMarketplaceButton"
+import { Button } from "@/components/ui/button"
 import {
   ArrowLeft,
   DollarSign,
@@ -15,6 +16,7 @@ import {
   AlertTriangle,
   FileCheck,
   Users,
+  ChevronRight,
 } from "lucide-react"
 import type { HomeownerProject } from "@/lib/types"
 
@@ -291,6 +293,24 @@ export default async function ExplorePage({
                       View Bids
                     </Link>
                   </div>
+                </div>
+              )}
+
+              {/* Continue to Dashboard CTA */}
+              {isScopeReady && (
+                <div className="flex flex-col gap-2">
+                  <Button
+                    asChild
+                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    <Link href={`/homeowner/projects/${id}`}>
+                      Continue to Project Dashboard
+                      <ChevronRight className="ml-2 size-4" />
+                    </Link>
+                  </Button>
+                  <p className="text-center text-xs text-muted-foreground">
+                    Review permits and submit to City of Palo Alto
+                  </p>
                 </div>
               )}
 
